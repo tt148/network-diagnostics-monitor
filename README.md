@@ -48,12 +48,33 @@ pytest --cov=network_diagnostics_monitor --cov-report=term-missing --cov-fail-un
 
 Tests use deterministic simulated data and mocks; they must not make real network requests.
 
-## Architecture (Stage 1)
+## Stage 2: monitoring and incidents
+
+The monitoring database uses SQLAlchemy 2 and SQLite. By default it creates `./network_diagnostics.db`; set `NDM_DATABASE_URL` to choose another SQLAlchemy URL. No database or network service is required.
+
+```bash
+# Create ten fictional devices, generate three days of hourly synthetic metrics,
+# and evaluate incidents. All generated observations are labelled simulation.
+network-diagnostics seed
+network-diagnostics seed --days 5 --interval-minutes 30 --seed 42
+network-diagnostics incidents
+network-diagnostics incidents --status open
+network-diagnostics acknowledge 1 --by "Helpdesk technician"
+network-diagnostics resolve 1
+```
+
+The simulator uses a fixed random seed by default and includes scripted scenarios such as DNS degradation, high latency and packet loss, HTTP 5xx errors, and intermittent availability. The same device/metric/timestamp combination is not inserted twice. Incident evaluation deduplicates active alerts, updates occurrence counts, classifies severity, resolves active incidents when the latest observation is healthy, and detects availability flapping from recent up/down transitions. TLS expiry is represented by synthetic days-remaining metrics; it does not inspect a real certificate.
+
+## Architecture (Stages 1–2)
 
 - `config.py`: typed environment settings.
 - `safety.py`: target allowlisting, IP-range restrictions, and process-local rate limiting.
 - `checks/`: DNS, latency/loss, and HTTP/TLS engines. Each supports simulated and live execution.
-- `cli.py`: Typer command line entry point.
+- `cli.py`: Typer command line entry point (`diagnose`, `seed`, `incidents`, `acknowledge`, `resolve`).
+- `models.py`: SQLAlchemy `Device`, `Metric`, and `Incident` models.
+- `database.py`: SQLite-first engine, schema creation, and session helpers.
+- `simulation.py`: fictional inventory and deterministic metric generator.
+- `incidents.py`: threshold evaluation, deduplication, flapping detection, and incident lifecycle helpers.
 
 ## Roadmap
 
