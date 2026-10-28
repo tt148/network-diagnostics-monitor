@@ -4,7 +4,7 @@ A simulated-first network troubleshooting toolkit designed to demonstrate practi
 
 ## Stage 1 status
 
-Stage 1 implements the Python package scaffold, configuration, safety guardrails, simulated and live check engines, a `diagnose` CLI command, tests, and GitHub Actions CI. Later stages add persistence, incident handling, recommendations, reports, API, and dashboard.
+Stage 1 implements the Python package scaffold, configuration, safety guardrails, simulated and live check engines, a `diagnose` CLI command, tests, and GitHub Actions CI. Stage 2 adds persistence and incident handling; Stage 3 adds advisory troubleshooting recommendations and JSON, Markdown, and CSV reports. Later stages add the API and dashboard.
 
 ## Safety and scope
 
@@ -65,7 +65,27 @@ network-diagnostics resolve 1
 
 The simulator uses a fixed random seed by default and includes scripted scenarios such as DNS degradation, high latency and packet loss, HTTP 5xx errors, and intermittent availability. The same device/metric/timestamp combination is not inserted twice. Incident evaluation deduplicates active alerts, updates occurrence counts, classifies severity, resolves active incidents when the latest observation is healthy, and detects availability flapping from recent up/down transitions. TLS expiry is represented by synthetic days-remaining metrics; it does not inspect a real certificate.
 
-## Architecture (Stages 1–2)
+## Stage 3: recommendations and reports
+
+Stage 3 provides non-invasive, incident-specific troubleshooting guidance and report exports. Recommendations are advisory: the application does not apply configuration changes, restart devices, or run additional network probes. Confirm symptoms independently and follow your organisation's change-control process.
+
+```bash
+# Show recommendations for every recorded incident, or specify an incident ID
+network-diagnostics recommendations
+network-diagnostics recommendations 2
+
+# Print a Markdown report to the terminal (default)
+network-diagnostics report
+
+# Export machine-readable JSON, spreadsheet-friendly CSV, or Markdown
+network-diagnostics report --format json --output reports/monitoring-report.json
+network-diagnostics report --format csv --output reports/incidents.csv
+network-diagnostics report --format markdown --output reports/monitoring-report.md
+```
+
+Reports include device and metric counts, incident status/severity summaries, incident duration, lifecycle timestamps, flapping flags, and recommended next steps. Reports use persisted data only; synthetic records remain synthetic and should not be presented as evidence of a real outage. Output files are not committed automatically.
+
+## Architecture (Stages 1–3)
 
 - `config.py`: typed environment settings.
 - `safety.py`: target allowlisting, IP-range restrictions, and process-local rate limiting.
@@ -75,12 +95,14 @@ The simulator uses a fixed random seed by default and includes scripted scenario
 - `database.py`: SQLite-first engine, schema creation, and session helpers.
 - `simulation.py`: fictional inventory and deterministic metric generator.
 - `incidents.py`: threshold evaluation, deduplication, flapping detection, and incident lifecycle helpers.
+- `recommendations.py`: advisory troubleshooting steps keyed to incident type.
+- `reports.py`: structured report generation in JSON, Markdown, and CSV.
 
 ## Roadmap
 
 1. **Stage 1:** safe diagnostics engines and CLI.
 2. **Stage 2:** SQLite models, deterministic simulated devices/metrics, incident engine.
-3. **Stage 3:** troubleshooting recommendations and report exports.
+3. **Stage 3:** actionable troubleshooting recommendations and report exports (implemented).
 4. **Stage 4:** FastAPI, REST API, responsive dashboard.
 5. **Stage 5:** containerization, complete operations documentation, deployment guide, architecture diagram.
 
