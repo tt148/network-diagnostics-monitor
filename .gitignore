@@ -13,3 +13,8 @@ reports/*
 dist/
 build/
 .DS_Store
+
+# Local monitoring database
+*.db
+*.sqlite
+*.sqlite3

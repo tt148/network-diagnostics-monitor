@@ -4,7 +4,7 @@ A simulated-first network troubleshooting toolkit designed to demonstrate practi
 
 ## Stage 1 status
 
-Stage 1 implements the Python package scaffold, configuration, safety guardrails, simulated and live check engines, a `diagnose` CLI command, tests, and GitHub Actions CI. Stage 2 adds persistence and incident handling; Stage 3 adds advisory troubleshooting recommendations and JSON, Markdown, and CSV reports. Later stages add the API and dashboard.
+Stage 1 implements the Python package scaffold, configuration, safety guardrails, simulated and live check engines, a `diagnose` CLI command, tests, and GitHub Actions CI. Stage 2 adds persistence and incident handling; Stage 3 adds advisory troubleshooting recommendations and JSON, Markdown, and CSV reports; Stage 4 exposes the persisted data through a FastAPI API and local dashboard.
 
 ## Safety and scope
 
@@ -97,13 +97,31 @@ Reports include device and metric counts, incident status/severity summaries, in
 - `incidents.py`: threshold evaluation, deduplication, flapping detection, and incident lifecycle helpers.
 - `recommendations.py`: advisory troubleshooting steps keyed to incident type.
 - `reports.py`: structured report generation in JSON, Markdown, and CSV.
+- `api.py`: FastAPI endpoints, incident lifecycle actions, and a responsive local dashboard.
+
+## Stage 4: API and dashboard
+
+Stage 4 provides a FastAPI read API, incident lifecycle actions, report endpoints, and a responsive local dashboard. The API does not expose live diagnostic probes; it reads persisted measurements and offers explicit incident acknowledgement/resolution actions. Dashboard actions use the same API and do not initiate network traffic to monitored devices.
+
+Install the package with development dependencies, then start the local server from the repository root:
+
+```bash
+python -m pip install -e ".[dev]"
+uvicorn network_diagnostics_monitor.api:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000/` for the dashboard, `http://127.0.0.1:8000/docs` for interactive API documentation, or `http://127.0.0.1:8000/redoc` for the alternate API reference. Bind to `127.0.0.1` for local use. Do not expose the development server publicly without adding authentication, authorization, deployment hardening, and HTTPS.
+
+Key endpoints include `GET /api/summary`, `GET /api/devices`, `GET /api/metrics`, `GET /api/incidents`, `GET /api/incidents/{id}/recommendations`, `POST /api/incidents/{id}/acknowledge`, `POST /api/incidents/{id}/resolve`, and `GET /api/reports/{json|markdown|csv}`. List endpoints support bounded result limits.
+
+The dashboard uses browser-native JavaScript and CSS, with no external CDN or paid service dependency. Use `NDM_DATABASE_URL` to select the same SQLite database used by the CLI.
 
 ## Roadmap
 
 1. **Stage 1:** safe diagnostics engines and CLI.
 2. **Stage 2:** SQLite models, deterministic simulated devices/metrics, incident engine.
 3. **Stage 3:** actionable troubleshooting recommendations and report exports (implemented).
-4. **Stage 4:** FastAPI, REST API, responsive dashboard.
+4. **Stage 4:** FastAPI, REST API, responsive dashboard (implemented).
 5. **Stage 5:** containerization, complete operations documentation, deployment guide, architecture diagram.
 
 ## Screenshots
