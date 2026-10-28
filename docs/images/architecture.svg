@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Network Diagnostics Monitor architecture</title>
+  <desc id="desc">Users access a local dashboard and REST API or the Typer CLI. The application layer uses recommendations and reports, incident evaluation, simulation, and safety-controlled diagnostic engines. SQLAlchemy persists devices, metrics, and incidents in SQLite. Docker Compose runs the application with a persistent data volume.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.panel{fill:#fff;stroke:#64748b;stroke-width:2}.accent{fill:#e0f2fe;stroke:#0284c7;stroke-width:2}.data{fill:#dcfce7;stroke:#15803d;stroke-width:2}.deploy{fill:#fef3c7;stroke:#b45309;stroke-width:2}.title{font:700 25px sans-serif;fill:#0f172a}.head{font:700 18px sans-serif;fill:#0f172a}.body{font:15px sans-serif;fill:#334155}.small{font:13px sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="760" rx="18"/>
+  <text class="title" x="600" y="42" text-anchor="middle">Network Diagnostics Monitor — Architecture</text>
+  <rect class="accent" x="55" y="85" width="300" height="105" rx="12"/>
+  <text class="head" x="205" y="116" text-anchor="middle">Web dashboard</text><text class="body" x="205" y="143" text-anchor="middle">HTML / browser fetch</text><text class="small" x="205" y="166" text-anchor="middle">Summary, devices, incidents</text>
+  <rect class="accent" x="450" y="85" width="300" height="105" rx="12"/>
+  <text class="head" x="600" y="116" text-anchor="middle">FastAPI REST API</text><text class="body" x="600" y="143" text-anchor="middle">Read endpoints + incident actions</text><text class="small" x="600" y="166" text-anchor="middle">OpenAPI docs / JSON / CSV</text>
+  <rect class="accent" x="845" y="85" width="300" height="105" rx="12"/>
+  <text class="head" x="995" y="116" text-anchor="middle">Typer CLI</text><text class="body" x="995" y="143" text-anchor="middle">Diagnose, seed, manage incidents</text><text class="small" x="995" y="166" text-anchor="middle">Local operator workflow</text>
+  <path class="arrow" d="M355 137 H440"/><path class="arrow" d="M845 137 H760"/>
+  <rect class="panel" x="75" y="245" width="1050" height="230" rx="14"/>
+  <text class="head" x="600" y="275" text-anchor="middle">Application and domain layer</text>
+  <rect class="panel" x="100" y="300" width="225" height="125" rx="10"/><text class="head" x="212" y="329" text-anchor="middle">Safety + checks</text><text class="body" x="212" y="355" text-anchor="middle">DNS / latency / HTTP / TLS</text><text class="small" x="212" y="381" text-anchor="middle">Simulation default; allowlist</text><text class="small" x="212" y="401" text-anchor="middle">bounded timeouts / rate limits</text>
+  <rect class="panel" x="355" y="300" width="225" height="125" rx="10"/><text class="head" x="467" y="329" text-anchor="middle">Simulation</text><text class="body" x="467" y="355" text-anchor="middle">Fictional device inventory</text><text class="small" x="467" y="381" text-anchor="middle">Deterministic synthetic metrics</text><text class="small" x="467" y="401" text-anchor="middle">No external network required</text>
+  <rect class="panel" x="610" y="300" width="225" height="125" rx="10"/><text class="head" x="722" y="329" text-anchor="middle">Incident engine</text><text class="body" x="722" y="355" text-anchor="middle">Thresholds / severity</text><text class="small" x="722" y="381" text-anchor="middle">Deduplication / lifecycle</text><text class="small" x="722" y="401" text-anchor="middle">Duration / flapping</text>
+  <rect class="panel" x="865" y="300" width="225" height="125" rx="10"/><text class="head" x="977" y="329" text-anchor="middle">Recommendations</text><text class="body" x="977" y="355" text-anchor="middle">Actionable next steps</text><text class="small" x="977" y="381" text-anchor="middle">JSON / Markdown / CSV</text><text class="small" x="977" y="401" text-anchor="middle">Advisory; no auto-remediation</text>
+  <path class="arrow" d="M600 190 V232"/><path class="arrow" d="M600 232 V245"/><path class="arrow" d="M325 362 H345"/><path class="arrow" d="M580 362 H600"/><path class="arrow" d="M835 362 H855"/>
+  <rect class="data" x="250" y="535" width="700" height="100" rx="14"/><text class="head" x="600" y="568" text-anchor="middle">Persistence</text><text class="body" x="600" y="594" text-anchor="middle">SQLAlchemy models → SQLite database</text><text class="small" x="600" y="615" text-anchor="middle">Devices · Metrics · Incidents</text>
+  <path class="arrow" d="M722 425 V505 H600 V525"/><path class="arrow" d="M467 425 V495 H600 V525"/>
+  <rect class="deploy" x="55" y="665" width="1090" height="60" rx="12"/><text class="head" x="600" y="690" text-anchor="middle">Docker / Compose deployment</text><text class="small" x="600" y="711" text-anchor="middle">Python 3.12 image · non-root user · loopback port binding · persistent /data volume · health check</text>
+  <path class="arrow" d="M600 635 V655"/>
+</svg>

@@ -85,7 +85,7 @@ network-diagnostics report --format markdown --output reports/monitoring-report.
 
 Reports include device and metric counts, incident status/severity summaries, incident duration, lifecycle timestamps, flapping flags, and recommended next steps. Reports use persisted data only; synthetic records remain synthetic and should not be presented as evidence of a real outage. Output files are not committed automatically.
 
-## Architecture (Stages 1–3)
+## Architecture (Stages 1–4)
 
 - `config.py`: typed environment settings.
 - `safety.py`: target allowlisting, IP-range restrictions, and process-local rate limiting.
@@ -115,6 +115,26 @@ Open `http://127.0.0.1:8000/` for the dashboard, `http://127.0.0.1:8000/docs` fo
 Key endpoints include `GET /api/summary`, `GET /api/devices`, `GET /api/metrics`, `GET /api/incidents`, `GET /api/incidents/{id}/recommendations`, `POST /api/incidents/{id}/acknowledge`, `POST /api/incidents/{id}/resolve`, and `GET /api/reports/{json|markdown|csv}`. List endpoints support bounded result limits.
 
 The dashboard uses browser-native JavaScript and CSS, with no external CDN or paid service dependency. Use `NDM_DATABASE_URL` to select the same SQLite database used by the CLI.
+
+## Stage 5: packaging and deployment
+
+A Dockerfile and Docker Compose setup are included for reproducible local demonstrations. The image uses Python 3.12, runs as a non-root user, defaults to simulated mode, and stores SQLite data in a persistent named volume. Compose publishes the dashboard only on `127.0.0.1:8000` and configures a health check.
+
+```bash
+docker compose build
+docker compose up -d
+docker compose run --rm app network-diagnostics seed
+docker compose ps
+docker compose logs app
+```
+
+Open <http://127.0.0.1:8000/>. See [the deployment guide](docs/DEPLOYMENT.md) for operations, backup/restore notes, environment variables, troubleshooting, and optional Render considerations. The hand-authored [SVG architecture diagram](docs/images/architecture.svg) is also included.
+
+**Security limitation:** the current API has no authentication or authorization and is not safe for public exposure. Keep the service local; do not deploy it publicly until access controls and CSRF protections are implemented and reviewed. Render is optional and may require paid persistent storage for durable SQLite data. Docker can be run locally without a subscription.
+
+## Architecture diagram
+
+![Network Diagnostics Monitor architecture](docs/images/architecture.svg)
 
 ## Roadmap
 
