@@ -108,6 +108,79 @@ def test_acknowledge_resolve_lifecycle_and_validation(tmp_path):
         app.state.engine.dispose()
 
 
+def test_diagnosis_endpoint_simulated_and_live_gate(tmp_path):
+    app, client = _client(tmp_path)
+    try:
+        simulated = client.post("/api/diagnose", json={"target": "example.com"})
+        assert simulated.status_code == 200
+        assert simulated.json()["mode"] == "simulated"
+        assert simulated.json()["diagnosis"]["findings"]
+
+        live = client.post(
+            "/api/diagnose",
+            json={"target": "example.com", "mode": "live"},
+        )
+        assert live.status_code == 403
+        assert "NDM_ALLOW_LIVE_API=true" in live.json()["detail"]
+    finally:
+        app.state.engine.dispose()
+
+
+def test_report_html_postmortem_and_metric_series(tmp_path):
+    app, client = _client(tmp_path)
+    try:
+        html_report = client.get("/api/reports/html")
+        assert html_report.status_code == 200
+        assert html_report.headers["content-type"].startswith("text/html")
+        assert "<!doctype html>" in html_report.text
+
+        incidents = client.get("/api/incidents") .json()
+        incident_id = incidents[0]["id"]
+        postmortem = client.get(f"/api/incidents/{incident_id}/postmortem")
+        assert postmortem.status_code == 200
+        assert "## Summary" in postmortem.text
+
+        devices = client.get("/api/devices").json()
+        device_id = devices[0]["id"]
+        series = client.get(f"/api/devices/{device_id}/metrics?limit=20")
+        assert series.status_code == 200
+        assert series.json()
+        assert all("name" in item and "value" in item for item in series.json())
+
+        assert client.get("/api/incidents/9999/postmortem").status_code == 404
+    finally:
+        app.state.engine.dispose()
+
+
+def test_optional_api_key_protects_all_post_endpoints(tmp_path):
+    app, client = _client(tmp_path)
+    try:
+        app.state.settings.api_key = "secret-key"
+        incident_id = client.get("/api/incidents").json()[0]["id"]
+
+        for path, body in (
+            (f"/api/incidents/{incident_id}/acknowledge", {"acknowledged_by": "Operator"}),
+            (f"/api/incidents/{incident_id}/resolve", {}),
+            ("/api/diagnose", {"target": "example.com"}),
+        ):
+            missing = client.post(path, json=body)
+            assert missing.status_code == 401
+            wrong = client.post(path, json=body, headers={"X-API-Key": "wrong-key"})
+            assert wrong.status_code == 401
+
+        correct = client.post(
+            "/api/diagnose",
+            json={"target": "example.com"},
+            headers={"X-API-Key": "secret-key"},
+        )
+        assert correct.status_code == 200
+
+        app.state.settings.api_key = None
+        assert client.post(f"/api/incidents/{incident_id}/resolve", json={}).status_code == 200
+    finally:
+        app.state.engine.dispose()
+
+
 def test_reports_and_dashboard_render(tmp_path):
     app, client = _client(tmp_path)
     try:

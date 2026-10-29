@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     min_check_interval_seconds: float = Field(default=2.0, ge=0.0, le=3600.0)
     timeout_seconds: float = Field(default=3.0, gt=0.0, le=30.0)
     slow_dns_threshold_ms: float = Field(default=500.0, ge=0.0)
+    allow_live_api: bool = False
+    api_key: str | None = None
     dns_resolvers: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["1.1.1.1", "8.8.8.8"]
     )

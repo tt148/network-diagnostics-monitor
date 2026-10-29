@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import UTC, datetime
+from hmac import compare_digest
 from typing import Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
@@ -13,17 +14,37 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from . import __version__
+from .checks.dns import check_dns
+from .checks.http import check_http
+from .checks.latency import check_latency
+from .config import get_settings
 from .database import create_schema, make_engine, make_session_factory
+from .diagnosis import diagnose_target
 from .incidents import acknowledge_incident, incident_duration_seconds, resolve_incident
 from .models import Device, Incident, Metric
 from .recommendations import recommendations_as_dicts
-from .reports import build_report, render_csv, render_json, render_markdown
+from .reports import (
+    build_report,
+    render_csv,
+    render_html,
+    render_incident_postmortem,
+    render_json,
+    render_markdown,
+)
+from .safety import RateLimiter, SafetyError
 
 
 class AcknowledgeRequest(BaseModel):
     """Payload used to acknowledge an incident."""
 
     acknowledged_by: str = Field(default="technician", min_length=1, max_length=100)
+
+
+class DiagnoseRequest(BaseModel):
+    """A bounded diagnostic request for the API."""
+
+    target: str = Field(min_length=1, max_length=255)
+    mode: Literal["simulated", "live"] = "simulated"
 
 
 DASHBOARD_HTML = r"""<!doctype html>
@@ -127,6 +148,15 @@ def create_app(database_url: str | None = None) -> FastAPI:
     )
     api.state.engine = engine
     api.state.session_factory = session_factory
+    api.state.settings = get_settings()
+
+    def require_api_key(request: Request) -> None:
+        configured_key = api.state.settings.api_key
+        if configured_key is None:
+            return
+        supplied_key = request.headers.get("X-API-Key", "")
+        if not compare_digest(supplied_key, configured_key):
+            raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
     @api.get("/api/health", tags=["system"])
     def health() -> dict[str, str]:
@@ -244,7 +274,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
     @api.post("/api/incidents/{incident_id}/acknowledge", tags=["incidents"])
     def acknowledge(
-        incident_id: int, payload: AcknowledgeRequest, session: SessionDep
+        incident_id: int,
+        payload: AcknowledgeRequest,
+        session: SessionDep,
+        api_key: Any = Depends(require_api_key),
     ) -> dict[str, Any]:
         try:
             incident = acknowledge_incident(session, incident_id, payload.acknowledged_by)
@@ -261,7 +294,11 @@ def create_app(database_url: str | None = None) -> FastAPI:
         return _incident_dict(incident)
 
     @api.post("/api/incidents/{incident_id}/resolve", tags=["incidents"])
-    def resolve(incident_id: int, session: SessionDep) -> dict[str, Any]:
+    def resolve(
+        incident_id: int,
+        session: SessionDep,
+        api_key: Any = Depends(require_api_key),
+    ) -> dict[str, Any]:
         try:
             incident = resolve_incident(session, incident_id)
             session.commit()
@@ -281,14 +318,63 @@ def create_app(database_url: str | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Incident not found")
         return {"incident_id": incident.id, "recommendations": recommendations_as_dicts(incident)}
 
+    @api.post("/api/diagnose", tags=["diagnostics"])
+    def diagnose(
+        payload: DiagnoseRequest,
+        api_key: Any = Depends(require_api_key),
+    ) -> dict[str, Any]:
+        settings = api.state.settings
+        selected_mode = payload.mode
+        if selected_mode == "live" and not settings.allow_live_api:
+            raise HTTPException(
+                status_code=403,
+                detail="Live API diagnosis is disabled; set NDM_ALLOW_LIVE_API=true",
+            )
+        limiter = RateLimiter(settings.min_check_interval_seconds)
+        try:
+            dns_result = check_dns(
+                payload.target, mode=selected_mode, settings=settings, limiter=limiter
+            )
+            latency_result = check_latency(
+                payload.target, mode=selected_mode, settings=settings, limiter=limiter
+            )
+            http_result = check_http(
+                payload.target, mode=selected_mode, settings=settings, limiter=limiter
+            )
+        except (SafetyError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {
+            "target": payload.target,
+            "mode": selected_mode,
+            "dns": dns_result,
+            "latency": latency_result,
+            "http": http_result,
+            "diagnosis": diagnose_target(
+                payload.target, dns_result, latency_result, http_result
+            ),
+        }
+
     @api.get("/api/reports/{report_format}", tags=["reports"])
-    def report(report_format: Literal["json", "markdown", "csv"], session: SessionDep) -> Response:
+    def report(report_format: Literal["json", "markdown", "csv", "html"], session: SessionDep) -> Response:
         report_data = build_report(session)
         if report_format == "json":
             return Response(render_json(report_data), media_type="application/json")
         if report_format == "markdown":
             return Response(render_markdown(report_data), media_type="text/markdown; charset=utf-8")
+        if report_format == "html":
+            return HTMLResponse(render_html(report_data))
         return Response(render_csv(report_data), media_type="text/csv; charset=utf-8")
+
+    @api.get("/api/incidents/{incident_id}/postmortem", tags=["reports"])
+    def incident_postmortem(incident_id: int, session: SessionDep) -> Response:
+        incident = session.get(Incident, incident_id)
+        if incident is None:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        try:
+            body = render_incident_postmortem(build_report(session), incident_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return Response(body, media_type="text/markdown; charset=utf-8")
 
     @api.get("/", response_class=HTMLResponse, include_in_schema=False)
     def dashboard() -> str:
