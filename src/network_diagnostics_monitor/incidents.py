@@ -25,6 +25,17 @@ SEVERITY_THRESHOLDS = {
     "http_status": (500.0, 500.0),
     "tls_days_remaining": (3.0, 7.0),
 }
+REPLAY_INCIDENT_KINDS = frozenset(
+    {
+        "high_latency",
+        "packet_loss",
+        "device_unavailable",
+        "dns_degradation",
+        "http_error",
+        "tls_expiry",
+        "device_flapping",
+    }
+)
 
 
 def _utc(value: datetime | None = None) -> datetime:
@@ -188,6 +199,72 @@ def evaluate_incidents(
             active.resolved_at = current_time
             active.duration_seconds = _elapsed_seconds(active.started_at, current_time)
             changed.append(active)
+
+    session.flush()
+    return changed
+
+
+def replay_incidents(
+    session: Session,
+    *,
+    thresholds: dict[str, float] | None = None,
+) -> list[Incident]:
+    """Rebuild simulated metric incidents chronologically and idempotently."""
+    limits = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
+
+    existing = session.scalars(
+        select(Incident)
+        .join(Device, Incident.device_id == Device.id)
+        .where(Device.is_simulated.is_(True), Incident.kind.in_(REPLAY_INCIDENT_KINDS))
+    ).all()
+    for incident in existing:
+        session.delete(incident)
+    session.flush()
+
+    rows = session.execute(
+        select(Metric, Device)
+        .join(Device, Metric.device_id == Device.id)
+        .where(Device.is_simulated.is_(True))
+        .order_by(Metric.device_id, Metric.name, Metric.recorded_at, Metric.id)
+    ).all()
+
+    active: dict[tuple[int, str], Incident] = {}
+    changed: list[Incident] = []
+    for metric, device in rows:
+        kind = _incident_kind(metric.name)
+        key = (device.id, kind)
+        incident = active.get(key)
+        abnormal = _abnormal(metric, limits)
+        if abnormal:
+            if incident is None:
+                incident = Incident(
+                    device_id=device.id,
+                    kind=kind,
+                    title=f"{device.name}: {_title(kind)}",
+                    description=f"{metric.name} measured {metric.value:g} {metric.unit}".strip(),
+                    severity=_severity(metric),
+                    status="open",
+                    started_at=metric.recorded_at,
+                    last_observed_at=metric.recorded_at,
+                    occurrence_count=1,
+                )
+                session.add(incident)
+                active[key] = incident
+                changed.append(incident)
+            else:
+                incident.description = (
+                    f"{metric.name} measured {metric.value:g} {metric.unit}".strip()
+                )
+                incident.severity = _severity(metric)
+                incident.last_observed_at = metric.recorded_at
+                incident.occurrence_count += 1
+                changed.append(incident)
+        elif incident is not None:
+            incident.status = "resolved"
+            incident.resolved_at = metric.recorded_at
+            incident.duration_seconds = _elapsed_seconds(incident.started_at, metric.recorded_at)
+            changed.append(incident)
+            active.pop(key, None)
 
     session.flush()
     return changed

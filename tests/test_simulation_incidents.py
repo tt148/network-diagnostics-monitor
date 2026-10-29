@@ -10,6 +10,7 @@ from network_diagnostics_monitor.incidents import (
     acknowledge_incident,
     evaluate_incidents,
     incident_duration_seconds,
+    replay_incidents,
     resolve_incident,
 )
 from network_diagnostics_monitor.models import Device, Incident, Metric
@@ -51,6 +52,48 @@ def test_metrics_are_deterministic_and_idempotent(session):
     assert inserted == 10 * 6 * 5
     assert inserted_again == 0
     assert len(session.scalars(select(Metric)).all()) == count_before
+
+
+def test_replay_creates_resolved_and_open_history_idempotently(session):
+    end = datetime(2026, 10, 20, 12, tzinfo=UTC)
+    generate_metrics(session, days=3, interval_minutes=60, seed=42, end_time=end)
+
+    replayed = replay_incidents(session)
+    session.commit()
+    incidents = session.scalars(select(Incident)).all()
+    assert replayed
+    assert incidents
+    assert {incident.status for incident in incidents} >= {"open", "resolved"}
+
+    resolved = [incident for incident in incidents if incident.status == "resolved"]
+    assert resolved
+    assert all(incident.resolved_at is not None for incident in resolved)
+    assert all(incident.duration_seconds is not None for incident in resolved)
+
+    count_before = len(incidents)
+    replay_again = replay_incidents(session)
+    session.commit()
+    assert len(session.scalars(select(Incident)).all()) == count_before
+    assert replay_again
+
+
+def test_replay_manual_incident_is_preserved(session):
+    device = seed_devices(session)[0]
+    start = datetime(2026, 10, 1, tzinfo=UTC)
+    manual = Incident(
+        device_id=device.id,
+        kind="manual",
+        title="Operator note",
+        status="open",
+        started_at=start,
+        last_observed_at=start,
+    )
+    session.add(manual)
+    generate_metrics(session, days=1, interval_minutes=60, seed=42)
+    replay_incidents(session)
+    session.commit()
+
+    assert session.get(Incident, manual.id) is not None
 
 
 def test_invalid_simulation_ranges_rejected(session):

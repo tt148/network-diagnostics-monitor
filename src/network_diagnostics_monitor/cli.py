@@ -13,7 +13,7 @@ from .checks.http import check_http
 from .checks.latency import check_latency
 from .config import Settings, get_settings
 from .database import create_schema, make_engine, make_session_factory
-from .incidents import acknowledge_incident, evaluate_incidents, resolve_incident
+from .incidents import acknowledge_incident, replay_incidents, resolve_incident
 from .models import Incident
 from .recommendations import recommendations_as_dicts
 from .reports import build_report, render_csv, render_json, render_markdown
@@ -76,7 +76,7 @@ def seed(
         metric_count = generate_metrics(
             session, days=days, interval_minutes=interval_minutes, seed=seed_value
         )
-        incidents = evaluate_incidents(session)
+        incidents = replay_incidents(session)
         typer.echo(
             json.dumps(
                 {

@@ -97,13 +97,15 @@ def generate_metrics(
             http_status = 200
 
             # Scenarios are intentionally deterministic and easy to explain in docs.
-            if device.name == "dns-server-01" and (18 <= hour_index % 120 <= 21 or current == end):
+            if device.name == "dns-server-01" and 18 <= hour_index % 120 <= 21:
                 dns_ms, availability = 1800.0, 0.0
-            if device.name == "edge-router-01" and (30 <= hour_index % 120 <= 35 or current == end):
+            if device.name == "edge-router-01" and 30 <= hour_index % 120 <= 35:
                 latency, loss = 240.0, 18.0
-            if device.name == "web-server-01" and (42 <= hour_index % 120 <= 46 or current == end):
+            if device.name == "web-server-01" and 42 <= hour_index % 120 <= 46:
                 http_status, availability = 503, 0.0
-            if device.name == "vpn-gateway-01" and (55 <= hour_index % 120 <= 62 or current == end):
+            if device.name == "vpn-gateway-01" and (
+                55 <= hour_index % 120 <= 62 or current >= end - step * 3
+            ):
                 latency, loss = 155.0, 9.0
             if device.name == "access-point-02" and hour_index % 24 in {3, 4, 5, 6, 7, 8}:
                 availability = 0.0 if hour_index % 24 in {4, 6, 8} else 1.0
