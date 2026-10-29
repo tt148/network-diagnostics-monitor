@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -11,12 +12,12 @@ from .checks.dns import check_dns
 from .checks.http import check_http
 from .checks.latency import check_latency
 from .config import Settings, get_settings
-from .safety import RateLimiter, SafetyError
 from .database import create_schema, make_engine, make_session_factory
 from .incidents import acknowledge_incident, evaluate_incidents, resolve_incident
 from .models import Incident
 from .recommendations import recommendations_as_dicts
 from .reports import build_report, render_csv, render_json, render_markdown
+from .safety import RateLimiter, SafetyError
 from .simulation import generate_metrics, seed_devices
 
 app = typer.Typer(
@@ -56,11 +57,6 @@ def diagnose(
     except (SafetyError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    app()
-
 
 
 @app.command()
@@ -188,11 +184,13 @@ def report(
     renderers = {"json": render_json, "markdown": render_markdown, "csv": render_csv}
     rendered = renderers[format](report_data)
     if output:
-        from pathlib import Path
-
         destination = Path(output).expanduser()
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(rendered, encoding="utf-8", newline="")
         typer.echo(json.dumps({"format": format, "output": str(destination), "bytes": len(rendered.encode("utf-8"))}))
     else:
         typer.echo(rendered, nl=False)
+
+
+if __name__ == "__main__":
+    app()
