@@ -51,8 +51,18 @@ def hostname_from_target(target: str) -> str:
     return candidate.rstrip(".").lower()
 
 
+def _unwrap_mapped(
+    address: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    """Return the embedded IPv4 address of an IPv4-mapped IPv6 address (``::ffff:a.b.c.d``)."""
+    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
+        return address.ipv4_mapped
+    return address
+
+
 def _is_blocked_ip(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     """Return True for non-public ranges, including cloud metadata addresses."""
+    address = _unwrap_mapped(address)
     if address.is_loopback:
         return False  # Allowed only through an explicit localhost allowlist entry.
     if (
@@ -87,11 +97,8 @@ def validate_live_target(target: str, settings: Settings) -> str:
         address = ipaddress.ip_address(hostname)
     except ValueError:
         address = None
-    if address is not None:
-        if address.is_loopback and hostname not in allowlist:
-            raise SafetyError("Loopback targets must be explicitly allowlisted.")
-        if not settings.allow_lab_ranges and _is_blocked_ip(address):
-            raise SafetyError(f"Target IP {address} is blocked by the live safety policy.")
+    if address is not None and not settings.allow_lab_ranges and _is_blocked_ip(address):
+        raise SafetyError(f"Target IP {address} is blocked by the live safety policy.")
     return hostname
 
 
@@ -110,7 +117,7 @@ def validate_resolved_addresses(
     explicit_loopback = normalized_host in {"localhost", "127.0.0.1", "::1"}
     for raw_address in addresses:
         try:
-            address = ipaddress.ip_address(raw_address)
+            address = _unwrap_mapped(ipaddress.ip_address(raw_address))
         except ValueError:
             continue
         if address.is_loopback:

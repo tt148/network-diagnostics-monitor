@@ -51,6 +51,27 @@ def test_resolved_private_ip_is_rejected(settings) -> None:
         validate_resolved_addresses(["192.168.1.5"], settings)
 
 
+@pytest.mark.parametrize("address", ["::ffff:10.0.0.1", "::ffff:169.254.169.254"])
+def test_blocks_ipv4_mapped_private_literals(address, settings) -> None:
+    settings.allowed_targets.append(address)
+    with pytest.raises(SafetyError):
+        validate_live_target(address, settings)
+
+
+def test_resolved_ipv4_mapped_private_ip_is_rejected(settings) -> None:
+    with pytest.raises(SafetyError, match="blocked"):
+        validate_resolved_addresses(["::ffff:10.0.0.1"], settings, "example.com")
+
+
+def test_resolved_ipv4_mapped_loopback_is_rejected_for_public_names(settings) -> None:
+    with pytest.raises(SafetyError, match="loopback"):
+        validate_resolved_addresses(["::ffff:127.0.0.1"], settings, "example.com")
+
+
+def test_resolved_ipv4_mapped_public_ip_is_allowed(settings) -> None:
+    validate_resolved_addresses(["::ffff:93.184.216.34"], settings, "example.com")
+
+
 def test_lab_range_opt_in(settings) -> None:
     settings.allow_lab_ranges = True
     validate_resolved_addresses(["192.168.1.5"], settings)
