@@ -40,7 +40,10 @@ def check_http(
             "duration_ms": 43.1,
             "redirects": [],
             "tls": {"valid": True, "days_until_expiry": 90, "simulated": True},
-            "assertions": {"expected_status": status_ok, "keyword": keyword_ok if keyword else None},
+            "assertions": {
+                "expected_status": status_ok,
+                "keyword": keyword_ok if keyword else None,
+            },
             "message": "SIMULATED: no HTTP request or TLS handshake was made.",
         }
     if mode != "live":
@@ -63,17 +66,27 @@ def check_http(
             response = client.get(url)
     except httpx.TimeoutException as exc:
         return {
-            "target": url, "mode": "live", "status": "timeout", "status_code": None,
+            "target": url,
+            "mode": "live",
+            "status": "timeout",
+            "status_code": None,
             "duration_ms": round((time.perf_counter() - started) * 1000, 2),
-            "redirects": [], "tls": {"valid": None, "days_until_expiry": None},
-            "assertions": {}, "error": str(exc),
+            "redirects": [],
+            "tls": {"valid": None, "days_until_expiry": None},
+            "assertions": {},
+            "error": str(exc),
         }
     except httpx.HTTPError as exc:
         return {
-            "target": url, "mode": "live", "status": "error", "status_code": None,
+            "target": url,
+            "mode": "live",
+            "status": "error",
+            "status_code": None,
             "duration_ms": round((time.perf_counter() - started) * 1000, 2),
-            "redirects": [], "tls": {"valid": False, "days_until_expiry": None},
-            "assertions": {}, "error": str(exc),
+            "redirects": [],
+            "tls": {"valid": False, "days_until_expiry": None},
+            "assertions": {},
+            "error": str(exc),
         }
 
     duration_ms = round((time.perf_counter() - started) * 1000, 2)

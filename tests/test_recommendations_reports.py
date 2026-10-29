@@ -81,11 +81,17 @@ def test_report_summary_and_incident_recommendations():
     try:
         seed_devices(session)
         _incident(session, "tls_expiry")
-        session.add(Metric(
-            device_id=session.query(Device).first().id,
-            name="latency_ms", value=35.0, unit="ms", status="ok",
-            recorded_at=datetime(2026, 10, 20, tzinfo=UTC), source="simulation",
-        ))
+        session.add(
+            Metric(
+                device_id=session.query(Device).first().id,
+                name="latency_ms",
+                value=35.0,
+                unit="ms",
+                status="ok",
+                recorded_at=datetime(2026, 10, 20, tzinfo=UTC),
+                source="simulation",
+            )
+        )
         session.flush()
         report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=UTC))
         assert report["summary"]["device_count"] == 10

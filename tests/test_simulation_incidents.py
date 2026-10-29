@@ -102,8 +102,12 @@ def test_incident_acknowledge_and_manual_resolution(session):
     device = seed_devices(session)[0]
     start = datetime(2026, 2, 1, tzinfo=UTC)
     incident = Incident(
-        device_id=device.id, kind="manual", title="Manual test", severity="warning",
-        started_at=start, last_observed_at=start,
+        device_id=device.id,
+        kind="manual",
+        title="Manual test",
+        severity="warning",
+        started_at=start,
+        last_observed_at=start,
     )
     session.add(incident)
     session.commit()
@@ -190,7 +194,9 @@ def test_flapping_incident_resolves_when_history_stabilizes(session):
     assert incident is not None
     _add_metric(session, device, "availability", 1.0, start + timedelta(minutes=10))
     _add_metric(session, device, "availability", 1.0, start + timedelta(minutes=11))
-    evaluate_incidents(session, flapping_window=4, flapping_transitions=3, now=start + timedelta(minutes=12))
+    evaluate_incidents(
+        session, flapping_window=4, flapping_transitions=3, now=start + timedelta(minutes=12)
+    )
     session.commit()
     assert incident.status == "resolved"
 

@@ -33,7 +33,9 @@ def test_rejects_target_outside_allowlist(settings) -> None:
         validate_live_target("google.com", settings)
 
 
-@pytest.mark.parametrize("address", ["10.0.0.1", "192.168.1.2", "169.254.169.254", "100.100.100.200"])
+@pytest.mark.parametrize(
+    "address", ["10.0.0.1", "192.168.1.2", "169.254.169.254", "100.100.100.200"]
+)
 def test_blocks_private_link_local_and_metadata_ips(address, settings) -> None:
     settings.allowed_targets.append(address)
     with pytest.raises(SafetyError):
@@ -109,7 +111,11 @@ def test_safe_resolution_wraps_os_error(monkeypatch, settings) -> None:
 
     from network_diagnostics_monitor.safety import resolve_host_safely
 
-    monkeypatch.setattr(socket, "getaddrinfo", lambda *args, **kwargs: (_ for _ in ()).throw(socket.gaierror("failed")))
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *args, **kwargs: (_ for _ in ()).throw(socket.gaierror("failed")),
+    )
     with pytest.raises(SafetyError, match="Could not safely resolve"):
         resolve_host_safely("example.com", settings, 0.1)
 

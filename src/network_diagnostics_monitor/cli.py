@@ -51,7 +51,9 @@ def diagnose(
             "target": target,
             "mode": selected_mode,
             "dns": check_dns(target, mode=selected_mode, settings=settings, limiter=limiter),
-            "latency": check_latency(target, mode=selected_mode, settings=settings, limiter=limiter),
+            "latency": check_latency(
+                target, mode=selected_mode, settings=settings, limiter=limiter
+            ),
             "http": check_http(target, mode=selected_mode, settings=settings, limiter=limiter),
         }
     except (SafetyError, ValueError) as exc:
@@ -75,12 +77,17 @@ def seed(
             session, days=days, interval_minutes=interval_minutes, seed=seed_value
         )
         incidents = evaluate_incidents(session)
-        typer.echo(json.dumps({
-            "devices": len(devices),
-            "metrics_inserted": metric_count,
-            "incidents_created_or_updated": len(incidents),
-            "mode": "simulated",
-        }, indent=2))
+        typer.echo(
+            json.dumps(
+                {
+                    "devices": len(devices),
+                    "metrics_inserted": metric_count,
+                    "incidents_created_or_updated": len(incidents),
+                    "mode": "simulated",
+                },
+                indent=2,
+            )
+        )
 
 
 @app.command("incidents")
@@ -97,19 +104,24 @@ def list_incidents(
             if status not in {"open", "acknowledged", "resolved"}:
                 raise typer.BadParameter("status must be open, acknowledged, or resolved")
             query = query.filter(Incident.status == status)
-        typer.echo(json.dumps([
-            {
-                "id": item.id,
-                "device": item.device.name,
-                "kind": item.kind,
-                "severity": item.severity,
-                "status": item.status,
-                "started_at": item.started_at.isoformat(),
-                "duration_seconds": item.duration_seconds,
-                "is_flapping": item.is_flapping,
-            }
-            for item in query.all()
-        ], indent=2))
+        typer.echo(
+            json.dumps(
+                [
+                    {
+                        "id": item.id,
+                        "device": item.device.name,
+                        "kind": item.kind,
+                        "severity": item.severity,
+                        "status": item.status,
+                        "started_at": item.started_at.isoformat(),
+                        "duration_seconds": item.duration_seconds,
+                        "is_flapping": item.is_flapping,
+                    }
+                    for item in query.all()
+                ],
+                indent=2,
+            )
+        )
 
 
 @app.command("acknowledge")
@@ -132,16 +144,22 @@ def resolve(incident_id: Annotated[int, typer.Argument(help="Incident ID to reso
     create_schema(engine)
     with make_session_factory(engine).begin() as session:
         incident = resolve_incident(session, incident_id)
-        typer.echo(json.dumps({
-            "id": incident.id,
-            "status": incident.status,
-            "duration_seconds": incident.duration_seconds,
-        }))
+        typer.echo(
+            json.dumps(
+                {
+                    "id": incident.id,
+                    "status": incident.status,
+                    "duration_seconds": incident.duration_seconds,
+                }
+            )
+        )
 
 
 @app.command()
 def recommendations(
-    incident_id: Annotated[int | None, typer.Argument(help="Optional incident ID; omit to list all incidents.")] = None,
+    incident_id: Annotated[
+        int | None, typer.Argument(help="Optional incident ID; omit to list all incidents.")
+    ] = None,
 ) -> None:
     """Show advisory troubleshooting steps for one or all persisted incidents."""
     engine = make_engine()
@@ -152,26 +170,35 @@ def recommendations(
             incident = session.get(Incident, incident_id)
             if incident is None:
                 raise typer.BadParameter(f"incident {incident_id} was not found")
-            results = [{
-                "incident_id": incident.id,
-                "title": incident.title,
-                "severity": incident.severity,
-                "recommendations": recommendations_as_dicts(incident),
-            }]
+            results = [
+                {
+                    "incident_id": incident.id,
+                    "title": incident.title,
+                    "severity": incident.severity,
+                    "recommendations": recommendations_as_dicts(incident),
+                }
+            ]
         else:
-            results = [{
-                "incident_id": incident.id,
-                "title": incident.title,
-                "severity": incident.severity,
-                "recommendations": recommendations_as_dicts(incident),
-            } for incident in session.query(Incident).order_by(Incident.started_at.desc()).all()]
+            results = [
+                {
+                    "incident_id": incident.id,
+                    "title": incident.title,
+                    "severity": incident.severity,
+                    "recommendations": recommendations_as_dicts(incident),
+                }
+                for incident in session.query(Incident).order_by(Incident.started_at.desc()).all()
+            ]
         typer.echo(json.dumps(results, indent=2, sort_keys=True))
 
 
 @app.command()
 def report(
-    format: Annotated[str, typer.Option("--format", help="Report format: json, markdown, or csv.")] = "markdown",
-    output: Annotated[str | None, typer.Option("--output", help="Optional output file path.")] = None,
+    format: Annotated[
+        str, typer.Option("--format", help="Report format: json, markdown, or csv.")
+    ] = "markdown",
+    output: Annotated[
+        str | None, typer.Option("--output", help="Optional output file path.")
+    ] = None,
 ) -> None:
     """Generate a monitoring and incident report; optionally write it to a file."""
     if format not in {"json", "markdown", "csv"}:
@@ -187,7 +214,15 @@ def report(
         destination = Path(output).expanduser()
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(rendered, encoding="utf-8", newline="")
-        typer.echo(json.dumps({"format": format, "output": str(destination), "bytes": len(rendered.encode("utf-8"))}))
+        typer.echo(
+            json.dumps(
+                {
+                    "format": format,
+                    "output": str(destination),
+                    "bytes": len(rendered.encode("utf-8")),
+                }
+            )
+        )
     else:
         typer.echo(rendered, nl=False)
 

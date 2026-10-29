@@ -130,7 +130,9 @@ def test_ping_loss_is_not_hidden_by_tcp_fallback(
     assert result["packet_loss_percent"] == 100
 
 
-def test_ping_timeout_counts_as_packet_loss(monkeypatch, settings, limiter, safe_resolution) -> None:
+def test_ping_timeout_counts_as_packet_loss(
+    monkeypatch, settings, limiter, safe_resolution
+) -> None:
     monkeypatch.setattr(
         latency.subprocess, "run", _raise(subprocess.TimeoutExpired(cmd="ping", timeout=1))
     )

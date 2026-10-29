@@ -38,7 +38,10 @@ def check_dns(
                 "NS": ["ns1.example.com."],
                 "TXT": ['"simulated-diagnostic-record"'],
             },
-            "resolver_comparison": {"simulated-resolver-a": "match", "simulated-resolver-b": "match"},
+            "resolver_comparison": {
+                "simulated-resolver-a": "match",
+                "simulated-resolver-b": "match",
+            },
             "message": "SIMULATED: no DNS request was sent.",
         }
     if mode != "live":
@@ -80,12 +83,16 @@ def check_dns(
             custom.lifetime = settings.timeout_seconds
             try:
                 comparison[resolver_ip] = (
-                    "match" if set(str(r) for r in custom.resolve(hostname, "A")) == baseline else "different"
+                    "match"
+                    if set(str(r) for r in custom.resolve(hostname, "A")) == baseline
+                    else "different"
                 )
             except dns.exception.DNSException as exc:
                 comparison[resolver_ip] = type(exc).__name__.upper()
 
-    status = "error" if errors else ("slow" if duration_ms > settings.slow_dns_threshold_ms else "ok")
+    status = (
+        "error" if errors else ("slow" if duration_ms > settings.slow_dns_threshold_ms else "ok")
+    )
     return {
         "target": hostname,
         "mode": "live",

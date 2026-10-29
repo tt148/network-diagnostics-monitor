@@ -13,14 +13,32 @@ from .models import Device, Metric
 DEVICE_FIXTURES = (
     ("edge-router-01", "router", "router-01.simulated", "Network closet A", "Branch edge gateway"),
     ("core-switch-01", "switch", "switch-core.simulated", "Main rack", "Core switching"),
-    ("access-point-01", "access_point", "ap-01.simulated", "Office floor 1", "Wireless access point"),
-    ("access-point-02", "access_point", "ap-02.simulated", "Office floor 2", "Wireless access point"),
+    (
+        "access-point-01",
+        "access_point",
+        "ap-01.simulated",
+        "Office floor 1",
+        "Wireless access point",
+    ),
+    (
+        "access-point-02",
+        "access_point",
+        "ap-02.simulated",
+        "Office floor 2",
+        "Wireless access point",
+    ),
     ("dns-server-01", "dns_server", "dns-01.simulated", "Server room", "Internal name resolution"),
     ("web-server-01", "web_server", "web-01.simulated", "Server room", "Internal service endpoint"),
     ("nas-01", "nas", "nas-01.simulated", "Server room", "File storage"),
     ("printer-01", "printer", "printer-01.simulated", "Office floor 1", "Shared network printer"),
     ("vpn-gateway-01", "vpn_gateway", "vpn-01.simulated", "Main rack", "Remote access gateway"),
-    ("access-switch-01", "switch", "switch-access.simulated", "Network closet B", "Access-layer switching"),
+    (
+        "access-switch-01",
+        "switch",
+        "switch-access.simulated",
+        "Network closet B",
+        "Access-layer switching",
+    ),
 )
 
 
@@ -93,12 +111,48 @@ def generate_metrics(
             cert_days = 9.0 if device.name == "web-server-01" else 180.0
 
             measurements = (
-                ("latency_ms", latency, "ms", "critical" if latency >= 200 else "ok", "Round-trip estimate"),
-                ("packet_loss_pct", loss, "%", "critical" if loss >= 10 else "ok", "Synthetic packet loss"),
-                ("availability", availability, "ratio", "down" if availability < 1 else "up", "1=up, 0=down"),
-                ("dns_resolution_ms", dns_ms, "ms", "critical" if dns_ms >= 1000 else "ok", "Synthetic DNS latency"),
-                ("http_status", float(http_status), "code", "error" if http_status >= 500 else "ok", "Synthetic HTTP status"),
-                ("tls_days_remaining", cert_days, "days", "warning" if cert_days <= 14 else "ok", "Synthetic certificate validity"),
+                (
+                    "latency_ms",
+                    latency,
+                    "ms",
+                    "critical" if latency >= 200 else "ok",
+                    "Round-trip estimate",
+                ),
+                (
+                    "packet_loss_pct",
+                    loss,
+                    "%",
+                    "critical" if loss >= 10 else "ok",
+                    "Synthetic packet loss",
+                ),
+                (
+                    "availability",
+                    availability,
+                    "ratio",
+                    "down" if availability < 1 else "up",
+                    "1=up, 0=down",
+                ),
+                (
+                    "dns_resolution_ms",
+                    dns_ms,
+                    "ms",
+                    "critical" if dns_ms >= 1000 else "ok",
+                    "Synthetic DNS latency",
+                ),
+                (
+                    "http_status",
+                    float(http_status),
+                    "code",
+                    "error" if http_status >= 500 else "ok",
+                    "Synthetic HTTP status",
+                ),
+                (
+                    "tls_days_remaining",
+                    cert_days,
+                    "days",
+                    "warning" if cert_days <= 14 else "ok",
+                    "Synthetic certificate validity",
+                ),
             )
             for metric_name, value, unit, status, details in measurements:
                 exists = session.scalar(

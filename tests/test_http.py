@@ -35,16 +35,28 @@ def test_expected_non_2xx_status_can_pass_assertion(monkeypatch, settings, limit
         url = "https://example.com"
 
     class FakeClient:
-        def __init__(self, **kwargs): pass
-        def __enter__(self): return self
-        def __exit__(self, *args): return False
-        def get(self, url): return FakeResponse()
+        def __init__(self, **kwargs):
+            pass
 
-    monkeypatch.setattr(http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"])
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, url):
+            return FakeResponse()
+
+    monkeypatch.setattr(
+        http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"]
+    )
     monkeypatch.setattr(http_check.httpx, "Client", FakeClient)
-    monkeypatch.setattr(http_check, "_inspect_tls", lambda *args: {"valid": True, "days_until_expiry": 50})
-    result = check_http("https://example.com", mode="live", settings=settings,
-                        expected_status=503, limiter=limiter)
+    monkeypatch.setattr(
+        http_check, "_inspect_tls", lambda *args: {"valid": True, "days_until_expiry": 50}
+    )
+    result = check_http(
+        "https://example.com", mode="live", settings=settings, expected_status=503, limiter=limiter
+    )
     assert result["status"] == "ok"
     assert result["assertions"]["expected_status"] is True
 
@@ -74,18 +86,30 @@ def test_live_http_success_and_keyword(monkeypatch, settings, limiter) -> None:
     class FakeClient:
         def __init__(self, **kwargs):
             pass
+
         def __enter__(self):
             return self
+
         def __exit__(self, *args):
             return False
+
         def get(self, url):
             return FakeResponse()
 
-    monkeypatch.setattr(http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"])
+    monkeypatch.setattr(
+        http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"]
+    )
     monkeypatch.setattr(http_check.httpx, "Client", FakeClient)
-    monkeypatch.setattr(http_check, "_inspect_tls", lambda *args: {"valid": True, "days_until_expiry": 50})
-    result = check_http("https://example.com", mode="live", settings=settings,
-                        keyword="expected phrase", limiter=limiter)
+    monkeypatch.setattr(
+        http_check, "_inspect_tls", lambda *args: {"valid": True, "days_until_expiry": 50}
+    )
+    result = check_http(
+        "https://example.com",
+        mode="live",
+        settings=settings,
+        keyword="expected phrase",
+        limiter=limiter,
+    )
     assert result["status"] == "ok"
     assert result["assertions"] == {"expected_status": True, "keyword": True}
     assert result["tls"]["valid"] is True
@@ -106,13 +130,23 @@ def test_live_http_redirect_is_reported_not_followed(monkeypatch, settings, limi
     class FakeClient:
         def __init__(self, **kwargs):
             assert kwargs["follow_redirects"] is False
-        def __enter__(self): return self
-        def __exit__(self, *args): return False
-        def get(self, url): return FakeResponse()
 
-    monkeypatch.setattr(http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"])
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, url):
+            return FakeResponse()
+
+    monkeypatch.setattr(
+        http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"]
+    )
     monkeypatch.setattr(http_check.httpx, "Client", FakeClient)
-    monkeypatch.setattr(http_check, "_inspect_tls", lambda *args: {"valid": True, "days_until_expiry": 50})
+    monkeypatch.setattr(
+        http_check, "_inspect_tls", lambda *args: {"valid": True, "days_until_expiry": 50}
+    )
     result = check_http("https://example.com", mode="live", settings=settings, limiter=limiter)
     assert result["status_code"] == 302
     assert result["redirects"][0]["url"] == "https://other.example/"
@@ -124,12 +158,21 @@ def test_live_http_timeout(monkeypatch, settings, limiter) -> None:
     import network_diagnostics_monitor.checks.http as http_check
 
     class FakeClient:
-        def __init__(self, **kwargs): pass
-        def __enter__(self): return self
-        def __exit__(self, *args): return False
-        def get(self, url): raise httpx.ReadTimeout("timed out")
+        def __init__(self, **kwargs):
+            pass
 
-    monkeypatch.setattr(http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"])
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, url):
+            raise httpx.ReadTimeout("timed out")
+
+    monkeypatch.setattr(
+        http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"]
+    )
     monkeypatch.setattr(http_check.httpx, "Client", FakeClient)
     result = check_http("https://example.com", mode="live", settings=settings, limiter=limiter)
     assert result["status"] == "timeout"
@@ -142,12 +185,21 @@ def test_live_http_connection_error(monkeypatch, settings, limiter) -> None:
     import network_diagnostics_monitor.checks.http as http_check
 
     class FakeClient:
-        def __init__(self, **kwargs): pass
-        def __enter__(self): return self
-        def __exit__(self, *args): return False
-        def get(self, url): raise httpx.ConnectError("connection failed")
+        def __init__(self, **kwargs):
+            pass
 
-    monkeypatch.setattr(http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"])
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, url):
+            raise httpx.ConnectError("connection failed")
+
+    monkeypatch.setattr(
+        http_check, "resolve_host_safely", lambda *args, **kwargs: ["93.184.216.34"]
+    )
     monkeypatch.setattr(http_check.httpx, "Client", FakeClient)
     result = check_http("https://example.com", mode="live", settings=settings, limiter=limiter)
     assert result["status"] == "error"
@@ -158,5 +210,6 @@ def test_live_http_invalid_url_rejected(settings) -> None:
     import pytest
 
     from network_diagnostics_monitor.safety import SafetyError
+
     with pytest.raises(SafetyError, match="HTTP"):
         check_http("ftp://example.com", mode="live", settings=settings)

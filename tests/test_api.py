@@ -98,9 +98,12 @@ def test_acknowledge_resolve_lifecycle_and_validation(tmp_path):
         assert client.post(f"/api/incidents/{incident_id}/acknowledge", json={}).status_code == 409
         assert client.post("/api/incidents/9999/resolve").status_code == 404
         assert client.post("/api/incidents/9999/acknowledge", json={}).status_code == 404
-        assert client.post(
-            f"/api/incidents/{incident_id}/acknowledge", json={"acknowledged_by": ""}
-        ).status_code == 422
+        assert (
+            client.post(
+                f"/api/incidents/{incident_id}/acknowledge", json={"acknowledged_by": ""}
+            ).status_code
+            == 422
+        )
     finally:
         app.state.engine.dispose()
 
@@ -108,8 +111,12 @@ def test_acknowledge_resolve_lifecycle_and_validation(tmp_path):
 def test_reports_and_dashboard_render(tmp_path):
     app, client = _client(tmp_path)
     try:
-        assert client.get("/api/reports/json").headers["content-type"].startswith("application/json")
-        assert client.get("/api/reports/markdown").headers["content-type"].startswith("text/markdown")
+        assert (
+            client.get("/api/reports/json").headers["content-type"].startswith("application/json")
+        )
+        assert (
+            client.get("/api/reports/markdown").headers["content-type"].startswith("text/markdown")
+        )
         assert client.get("/api/reports/csv").headers["content-type"].startswith("text/csv")
         assert client.get("/api/reports/xml").status_code == 422
         dashboard = client.get("/")

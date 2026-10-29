@@ -117,7 +117,9 @@ def evaluate_incidents(
                 active.last_observed_at = metric.recorded_at
                 active.occurrence_count += 1
                 active.severity = _severity(metric)
-                active.description = f"{metric_name} measured {metric.value:g} {metric.unit}".strip()
+                active.description = (
+                    f"{metric_name} measured {metric.value:g} {metric.unit}".strip()
+                )
                 changed.append(active)
             else:
                 incident = Incident(

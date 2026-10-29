@@ -24,9 +24,12 @@ def make_engine(url: str | None = None) -> Engine:
         db_path = target.removeprefix("sqlite:///")
         if db_path and db_path != ":memory:":
             Path(db_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(target, connect_args={"check_same_thread": False} if target.startswith("sqlite") else {})
+    engine = create_engine(
+        target, connect_args={"check_same_thread": False} if target.startswith("sqlite") else {}
+    )
 
     if target.startswith("sqlite"):
+
         @event.listens_for(engine, "connect")
         def enable_foreign_keys(dbapi_connection: object, _connection_record: object) -> None:
             cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]

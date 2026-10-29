@@ -146,7 +146,9 @@ def check_latency(
     return {
         "target": hostname,
         "mode": "live",
-        "status": "unreachable" if not samples else ("degraded" if summary["packet_loss_percent"] > 0 else "ok"),
+        "status": "unreachable"
+        if not samples
+        else ("degraded" if summary["packet_loss_percent"] > 0 else "ok"),
         **summary,
         "message": "Live latency result; probes were sequential and bounded.",
     }

@@ -26,7 +26,7 @@ class AcknowledgeRequest(BaseModel):
     acknowledged_by: str = Field(default="technician", min_length=1, max_length=100)
 
 
-DASHBOARD_HTML = r'''<!doctype html>
+DASHBOARD_HTML = r"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -55,7 +55,7 @@ $('metric-rows').innerHTML=metrics.length?metrics.map(m=>`<tr><td>${esc(m.record
 async function action(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});if(!r.ok)throw new Error(await r.text());return r.json()}
 document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;try{if(b.dataset.ack)await action(`/api/incidents/${b.dataset.ack}/acknowledge`,{acknowledged_by:'dashboard technician'});else if(b.dataset.resolve)await action(`/api/incidents/${b.dataset.resolve}/resolve`);else if(b.dataset.rec){const d=await get(`/api/incidents/${b.dataset.rec}/recommendations`);alert(d.recommendations.map((r,n)=>`${n+1}. ${r.action}\nWhy: ${r.rationale}\nVerify: ${r.verification}`).join('\n\n'));return}else if(b.id==='refresh'){}await load()}catch(err){alert('Action failed: '+err.message)}});
 $('refresh').addEventListener('click',load);$('status-filter').addEventListener('change',load);load();
-</script></body></html>'''
+</script></body></html>"""
 
 
 def _device_dict(device: Device) -> dict[str, Any]:
@@ -130,12 +130,18 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
     @api.get("/api/health", tags=["system"])
     def health() -> dict[str, str]:
-        return {"status": "ok", "service": "network-diagnostics-monitor", "mode": "read-only-monitoring"}
+        return {
+            "status": "ok",
+            "service": "network-diagnostics-monitor",
+            "mode": "read-only-monitoring",
+        }
 
     @api.get("/api/summary", tags=["monitoring"])
     def summary(session: SessionDep) -> dict[str, Any]:
         devices = session.scalar(select(func.count(Device.id))) or 0
-        simulated = session.scalar(select(func.count(Device.id)).where(Device.is_simulated.is_(True))) or 0
+        simulated = (
+            session.scalar(select(func.count(Device.id)).where(Device.is_simulated.is_(True))) or 0
+        )
         metrics = session.scalar(select(func.count(Metric.id))) or 0
         incidents = session.scalars(select(Incident)).all()
         statuses = Counter(item.status for item in incidents)
@@ -145,14 +151,19 @@ def create_app(database_url: str | None = None) -> FastAPI:
             "simulated_device_count": simulated,
             "metric_count": metrics,
             "incident_count": len(incidents),
-            "active_incident_count": sum(item.status in {"open", "acknowledged"} for item in incidents),
+            "active_incident_count": sum(
+                item.status in {"open", "acknowledged"} for item in incidents
+            ),
             "status_counts": dict(sorted(statuses.items())),
             "severity_counts": dict(sorted(severities.items())),
         }
 
     @api.get("/api/devices", tags=["monitoring"])
     def list_devices(session: SessionDep) -> list[dict[str, Any]]:
-        return [_device_dict(item) for item in session.scalars(select(Device).order_by(Device.name)).all()]
+        return [
+            _device_dict(item)
+            for item in session.scalars(select(Device).order_by(Device.name)).all()
+        ]
 
     @api.get("/api/devices/{device_id}", tags=["monitoring"])
     def get_device(device_id: int, session: SessionDep) -> dict[str, Any]:
@@ -170,7 +181,11 @@ def create_app(database_url: str | None = None) -> FastAPI:
     ) -> list[dict[str, Any]]:
         if session.get(Device, device_id) is None:
             raise HTTPException(status_code=404, detail="Device not found")
-        query = select(Metric).where(Metric.device_id == device_id).order_by(Metric.recorded_at.desc(), Metric.id.desc())
+        query = (
+            select(Metric)
+            .where(Metric.device_id == device_id)
+            .order_by(Metric.recorded_at.desc(), Metric.id.desc())
+        )
         if name:
             query = query.where(Metric.name == name)
         rows = session.scalars(query.limit(limit)).all()
@@ -183,7 +198,11 @@ def create_app(database_url: str | None = None) -> FastAPI:
         device_id: int | None = None,
         name: str | None = None,
     ) -> list[dict[str, Any]]:
-        query = select(Metric).options(joinedload(Metric.device)).order_by(Metric.recorded_at.desc(), Metric.id.desc())
+        query = (
+            select(Metric)
+            .options(joinedload(Metric.device))
+            .order_by(Metric.recorded_at.desc(), Metric.id.desc())
+        )
         if device_id is not None:
             query = query.where(Metric.device_id == device_id)
         if name:
@@ -198,7 +217,11 @@ def create_app(database_url: str | None = None) -> FastAPI:
         device_id: int | None = None,
         limit: Annotated[int, Query(ge=1, le=500)] = 100,
     ) -> list[dict[str, Any]]:
-        query = select(Incident).options(joinedload(Incident.device)).order_by(Incident.started_at.desc(), Incident.id.desc())
+        query = (
+            select(Incident)
+            .options(joinedload(Incident.device))
+            .order_by(Incident.started_at.desc(), Incident.id.desc())
+        )
         if status:
             query = query.where(Incident.status == status)
         if severity:
@@ -206,17 +229,23 @@ def create_app(database_url: str | None = None) -> FastAPI:
         if device_id is not None:
             query = query.where(Incident.device_id == device_id)
         now = datetime.now(UTC)
-        return [_incident_dict(item, now) for item in session.scalars(query.limit(limit)).unique().all()]
+        return [
+            _incident_dict(item, now) for item in session.scalars(query.limit(limit)).unique().all()
+        ]
 
     @api.get("/api/incidents/{incident_id}", tags=["incidents"])
     def get_incident(incident_id: int, session: SessionDep) -> dict[str, Any]:
-        incident = session.scalar(select(Incident).options(joinedload(Incident.device)).where(Incident.id == incident_id))
+        incident = session.scalar(
+            select(Incident).options(joinedload(Incident.device)).where(Incident.id == incident_id)
+        )
         if incident is None:
             raise HTTPException(status_code=404, detail="Incident not found")
         return _incident_dict(incident)
 
     @api.post("/api/incidents/{incident_id}/acknowledge", tags=["incidents"])
-    def acknowledge(incident_id: int, payload: AcknowledgeRequest, session: SessionDep) -> dict[str, Any]:
+    def acknowledge(
+        incident_id: int, payload: AcknowledgeRequest, session: SessionDep
+    ) -> dict[str, Any]:
         try:
             incident = acknowledge_incident(session, incident_id, payload.acknowledged_by)
             session.commit()
@@ -225,7 +254,9 @@ def create_app(database_url: str | None = None) -> FastAPI:
             session.rollback()
             status_code = 404 if "not found" in str(exc).lower() else 409
             raise HTTPException(status_code=status_code, detail=str(exc)) from exc
-        incident = session.scalar(select(Incident).options(joinedload(Incident.device)).where(Incident.id == incident_id))
+        incident = session.scalar(
+            select(Incident).options(joinedload(Incident.device)).where(Incident.id == incident_id)
+        )
         assert incident is not None
         return _incident_dict(incident)
 
@@ -237,7 +268,9 @@ def create_app(database_url: str | None = None) -> FastAPI:
         except ValueError as exc:
             session.rollback()
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        incident = session.scalar(select(Incident).options(joinedload(Incident.device)).where(Incident.id == incident_id))
+        incident = session.scalar(
+            select(Incident).options(joinedload(Incident.device)).where(Incident.id == incident_id)
+        )
         assert incident is not None
         return _incident_dict(incident)
 

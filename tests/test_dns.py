@@ -20,7 +20,9 @@ def test_live_dns_rejects_non_allowlisted_target(settings) -> None:
 
 def test_invalid_record_type_fails_in_live_mode(settings, limiter) -> None:
     with pytest.raises(ValueError, match="Unsupported DNS record"):
-        check_dns("example.com", mode="live", settings=settings, record_types=("BOGUS",), limiter=limiter)
+        check_dns(
+            "example.com", mode="live", settings=settings, record_types=("BOGUS",), limiter=limiter
+        )
 
 
 def test_unknown_mode_rejected(settings) -> None:
@@ -52,8 +54,9 @@ def test_live_dns_success_and_comparison(monkeypatch, settings, limiter) -> None
             return Answer()
 
     monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
-    result = check_dns("example.com", mode="live", settings=settings, limiter=limiter,
-                       record_types=("A",))
+    result = check_dns(
+        "example.com", mode="live", settings=settings, limiter=limiter, record_types=("A",)
+    )
     assert result["mode"] == "live"
     assert result["status"] == "ok"
     assert result["records"]["A"] == ["93.184.216.34"]
@@ -73,8 +76,9 @@ def test_live_dns_nxdomain(monkeypatch, settings, limiter) -> None:
             raise dns.resolver.NXDOMAIN()
 
     monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
-    result = check_dns("example.com", mode="live", settings=settings, limiter=limiter,
-                       record_types=("A",))
+    result = check_dns(
+        "example.com", mode="live", settings=settings, limiter=limiter, record_types=("A",)
+    )
     assert result["status"] == "error"
     assert result["errors"]["A"] == "NXDOMAIN"
 
@@ -96,8 +100,9 @@ def test_live_dns_no_answer_and_servfail(monkeypatch, settings, limiter) -> None
             raise dns.resolver.NoNameservers()
 
     monkeypatch.setattr(dns.resolver, "Resolver", FakeResolver)
-    result = check_dns("example.com", mode="live", settings=settings, limiter=limiter,
-                       record_types=("A", "AAAA"))
+    result = check_dns(
+        "example.com", mode="live", settings=settings, limiter=limiter, record_types=("A", "AAAA")
+    )
     assert result["records"]["A"] == []
     assert result["errors"]["AAAA"] == "SERVFAIL"
     assert result["resolver_comparison"]["1.1.1.1"] == "NONAMESERVERS"

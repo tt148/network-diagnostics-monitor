@@ -31,7 +31,9 @@ class Device(Base):
     is_simulated: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
-    metrics: Mapped[list[Metric]] = relationship(back_populates="device", cascade="all, delete-orphan")
+    metrics: Mapped[list[Metric]] = relationship(
+        back_populates="device", cascade="all, delete-orphan"
+    )
     incidents: Mapped[list[Incident]] = relationship(back_populates="device")
 
 
