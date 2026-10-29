@@ -11,7 +11,7 @@ from statistics import mean
 from typing import Any
 
 from ..config import Settings
-from ..safety import RateLimiter, SafetyError, resolve_host_safely, validate_live_target
+from ..safety import RateLimiter, resolve_host_safely, validate_live_target
 
 
 def _summary(samples: list[float], attempted: int, method: str) -> dict[str, Any]:

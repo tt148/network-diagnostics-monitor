@@ -1,12 +1,12 @@
 """API and dashboard regression tests for Stage 4."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
 from network_diagnostics_monitor.api import create_app
 from network_diagnostics_monitor.database import make_session_factory
-from network_diagnostics_monitor.models import Device, Incident, Metric
+from network_diagnostics_monitor.models import Device, Incident
 from network_diagnostics_monitor.simulation import generate_metrics, seed_devices
 
 
@@ -26,8 +26,8 @@ def _client(tmp_path):
             description="Synthetic test incident",
             severity="major",
             status="open",
-            started_at=datetime(2026, 10, 28, tzinfo=timezone.utc),
-            last_observed_at=datetime(2026, 10, 28, 0, 5, tzinfo=timezone.utc),
+            started_at=datetime(2026, 10, 28, tzinfo=UTC),
+            last_observed_at=datetime(2026, 10, 28, 0, 5, tzinfo=UTC),
         )
         session.add(incident)
     return app, client

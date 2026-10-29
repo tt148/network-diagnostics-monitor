@@ -2,7 +2,7 @@
 
 import csv
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from typer.testing import CliRunner
 
@@ -25,7 +25,7 @@ def _incident(session, kind="high_latency", *, status="open"):
     device = session.query(Device).first()
     if device is None:
         device = seed_devices(session)[0]
-    start = datetime(2026, 10, 20, tzinfo=timezone.utc)
+    start = datetime(2026, 10, 20, tzinfo=UTC)
     incident = Incident(
         device_id=device.id,
         kind=kind,
@@ -76,10 +76,10 @@ def test_report_summary_and_incident_recommendations():
         session.add(Metric(
             device_id=session.query(Device).first().id,
             name="latency_ms", value=35.0, unit="ms", status="ok",
-            recorded_at=datetime(2026, 10, 20, tzinfo=timezone.utc), source="simulation",
+            recorded_at=datetime(2026, 10, 20, tzinfo=UTC), source="simulation",
         ))
         session.flush()
-        report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=timezone.utc))
+        report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=UTC))
         assert report["summary"]["device_count"] == 10
         assert report["summary"]["simulated_device_count"] == 10
         assert report["summary"]["metric_count"] == 1
@@ -95,7 +95,7 @@ def test_report_renderers_produce_valid_json_markdown_and_csv():
     engine, session = _session()
     try:
         _incident(session, "http_error")
-        report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=timezone.utc))
+        report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=UTC))
         decoded = json.loads(render_json(report))
         assert decoded["summary"]["incident_count"] == 1
         markdown = render_markdown(report)
@@ -112,7 +112,7 @@ def test_report_renderers_produce_valid_json_markdown_and_csv():
 def test_empty_report_rendering_is_valid():
     engine, session = _session()
     try:
-        report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=timezone.utc))
+        report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=UTC))
         assert report["summary"]["device_count"] == 0
         assert "No incidents recorded" in render_markdown(report)
         assert json.loads(render_json(report))["incidents"] == []

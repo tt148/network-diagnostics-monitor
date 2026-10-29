@@ -6,7 +6,7 @@ import csv
 import io
 import json
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -52,7 +52,7 @@ def build_report(session: Session, *, generated_at: datetime | None = None) -> d
 
     return {
         "report_version": 1,
-        "generated_at": _iso(generated_at or datetime.now(timezone.utc)),
+        "generated_at": _iso(generated_at or datetime.now(UTC)),
         "data_mode": "persisted data; individual metric sources are retained in the database",
         "summary": {
             "device_count": len(devices),

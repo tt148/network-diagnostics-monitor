@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
@@ -95,8 +95,8 @@ def _iso(value: datetime | None) -> str | None:
     if value is None:
         return None
     if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def get_session(request: Request):
@@ -204,7 +204,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
             query = query.where(Incident.severity == severity)
         if device_id is not None:
             query = query.where(Incident.device_id == device_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return [_incident_dict(item, now) for item in session.scalars(query.limit(limit)).unique().all()]
 
     @api.get("/api/incidents/{incident_id}", tags=["incidents"])

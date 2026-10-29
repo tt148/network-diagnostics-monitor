@@ -1,6 +1,6 @@
 """Regression tests for Stage 2 persistence, simulation, and incidents."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -42,7 +42,7 @@ def test_seed_is_idempotent(session):
 
 
 def test_metrics_are_deterministic_and_idempotent(session):
-    end = datetime(2026, 10, 20, tzinfo=timezone.utc)
+    end = datetime(2026, 10, 20, tzinfo=UTC)
     inserted = generate_metrics(session, days=1, interval_minutes=360, seed=7, end_time=end)
     session.commit()
     count_before = len(session.scalars(select(Metric)).all())
@@ -77,7 +77,7 @@ def _add_metric(session, device, name, value, recorded_at):
 
 def test_incident_detection_deduplicates_and_resolves(session):
     device = seed_devices(session)[0]
-    first = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    first = datetime(2026, 1, 1, tzinfo=UTC)
     _add_metric(session, device, "latency_ms", 180, first)
     found = evaluate_incidents(session)
     session.commit()
@@ -100,7 +100,7 @@ def test_incident_detection_deduplicates_and_resolves(session):
 
 def test_incident_acknowledge_and_manual_resolution(session):
     device = seed_devices(session)[0]
-    start = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    start = datetime(2026, 2, 1, tzinfo=UTC)
     incident = Incident(
         device_id=device.id, kind="manual", title="Manual test", severity="warning",
         started_at=start, last_observed_at=start,
@@ -130,7 +130,7 @@ def test_missing_incident_and_blank_acknowledger_rejected(session):
 
 def test_flapping_detected_from_availability_transitions(session):
     device = seed_devices(session)[0]
-    start = datetime(2026, 3, 1, tzinfo=timezone.utc)
+    start = datetime(2026, 3, 1, tzinfo=UTC)
     for index, value in enumerate([1, 0, 1, 0, 1, 0, 1]):
         _add_metric(session, device, "availability", float(value), start + timedelta(minutes=index))
     evaluate_incidents(session, flapping_window=12, flapping_transitions=4)
@@ -142,7 +142,7 @@ def test_flapping_detected_from_availability_transitions(session):
 
 def test_incident_duration_for_active_incident(session):
     device = seed_devices(session)[0]
-    start = datetime(2026, 4, 1, tzinfo=timezone.utc)
+    start = datetime(2026, 4, 1, tzinfo=UTC)
     incident = Incident(device_id=device.id, kind="manual", title="Active", started_at=start)
     session.add(incident)
     session.commit()
@@ -151,7 +151,7 @@ def test_incident_duration_for_active_incident(session):
 
 def test_threshold_override_and_availability_incident(session):
     device = seed_devices(session)[0]
-    now = datetime(2026, 5, 1, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 1, tzinfo=UTC)
     _add_metric(session, device, "latency_ms", 90, now)
     evaluate_incidents(session, thresholds={"latency_ms": 80})
     session.commit()
@@ -167,7 +167,7 @@ def test_threshold_override_and_availability_incident(session):
 
 def test_dns_http_and_tls_threshold_classification(session):
     device = seed_devices(session)[0]
-    now = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    now = datetime(2026, 6, 1, tzinfo=UTC)
     _add_metric(session, device, "dns_resolution_ms", 1800, now)
     _add_metric(session, device, "http_status", 503, now)
     _add_metric(session, device, "tls_days_remaining", 2, now)
@@ -181,7 +181,7 @@ def test_dns_http_and_tls_threshold_classification(session):
 
 def test_flapping_incident_resolves_when_history_stabilizes(session):
     device = seed_devices(session)[0]
-    start = datetime(2026, 7, 1, tzinfo=timezone.utc)
+    start = datetime(2026, 7, 1, tzinfo=UTC)
     for index, value in enumerate([1, 0, 1, 0, 1, 0]):
         _add_metric(session, device, "availability", float(value), start + timedelta(minutes=index))
     evaluate_incidents(session, flapping_window=12, flapping_transitions=4, now=start)

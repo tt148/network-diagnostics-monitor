@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -63,7 +63,7 @@ def generate_metrics(
         raise ValueError("interval_minutes must be between 5 and 1440")
     rng = random.Random(seed)
     devices = seed_devices(session)
-    end = end_time or datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    end = end_time or datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
     start = end - timedelta(days=days)
     step = timedelta(minutes=interval_minutes)
     count = 0
@@ -89,11 +89,8 @@ def generate_metrics(
                 latency, loss = 155.0, 9.0
             if device.name == "access-point-02" and hour_index % 24 in {3, 4, 5, 6, 7, 8}:
                 availability = 0.0 if hour_index % 24 in {4, 6, 8} else 1.0
-            if device.name == "web-server-01":
-                # Certificate remaining validity is a synthetic metric in days.
-                cert_days = 9.0
-            else:
-                cert_days = 180.0
+            # Certificate remaining validity is a synthetic metric in days.
+            cert_days = 9.0 if device.name == "web-server-01" else 180.0
 
             measurements = (
                 ("latency_ms", latency, "ms", "critical" if latency >= 200 else "ok", "Round-trip estimate"),

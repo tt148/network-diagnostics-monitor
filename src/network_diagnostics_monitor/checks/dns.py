@@ -9,7 +9,7 @@ import dns.exception
 import dns.resolver
 
 from ..config import Settings
-from ..safety import RateLimiter, SafetyError, validate_live_target
+from ..safety import RateLimiter, validate_live_target
 
 DNS_RECORD_TYPES = ("A", "AAAA", "CNAME", "MX", "NS", "TXT")
 

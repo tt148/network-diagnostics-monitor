@@ -5,7 +5,7 @@ from __future__ import annotations
 import socket
 import ssl
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -106,14 +106,16 @@ def _inspect_tls(hostname: str, port: int, timeout: float) -> dict[str, Any]:
     days_until_expiry: int | None = None
     error: str | None = None
     try:
-        with socket.create_connection((hostname, port), timeout=timeout) as raw_socket:
-            with context.wrap_socket(raw_socket, server_hostname=hostname) as tls_socket:
-                certificate = tls_socket.getpeercert()
-                not_after = certificate.get("notAfter")
-                if not_after:
-                    expires = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
-                    days_until_expiry = (expires - datetime.now(timezone.utc)).days
-                valid = True
+        with (
+            socket.create_connection((hostname, port), timeout=timeout) as raw_socket,
+            context.wrap_socket(raw_socket, server_hostname=hostname) as tls_socket,
+        ):
+            certificate = tls_socket.getpeercert()
+            not_after = certificate.get("notAfter")
+            if not_after:
+                expires = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=UTC)
+                days_until_expiry = (expires - datetime.now(UTC)).days
+            valid = True
     except (OSError, ssl.SSLError, ValueError) as exc:
         error = str(exc)
     result: dict[str, Any] = {"valid": valid, "days_until_expiry": days_until_expiry}

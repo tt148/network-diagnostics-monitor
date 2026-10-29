@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from itertools import pairwise
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,15 +28,15 @@ SEVERITY_THRESHOLDS = {
 
 
 def _utc(value: datetime | None = None) -> datetime:
-    return value or datetime.now(timezone.utc)
+    return value or datetime.now(UTC)
 
 
 def _elapsed_seconds(start: datetime, end: datetime) -> float:
     """Subtract datetimes consistently when SQLite returns naive UTC values."""
     if start.tzinfo is None:
-        start = start.replace(tzinfo=timezone.utc)
+        start = start.replace(tzinfo=UTC)
     if end.tzinfo is None:
-        end = end.replace(tzinfo=timezone.utc)
+        end = end.replace(tzinfo=UTC)
     return max(0.0, (end - start).total_seconds())
 
 
@@ -151,7 +152,7 @@ def evaluate_incidents(
         if len(history) < 2:
             continue
         states = [metric.value >= 1.0 for metric in reversed(history)]
-        transitions = sum(left != right for left, right in zip(states, states[1:]))
+        transitions = sum(left != right for left, right in pairwise(states))
         kind = "device_flapping"
         active = session.scalar(
             select(Incident).where(
