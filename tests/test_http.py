@@ -1,5 +1,7 @@
 """HTTP/TLS checker tests without real HTTP calls."""
 
+from typing import ClassVar
+
 import pytest
 
 from network_diagnostics_monitor.checks.http import check_http
@@ -26,8 +28,8 @@ def test_expected_non_2xx_status_can_pass_assertion(monkeypatch, settings, limit
     class FakeResponse:
         status_code = 503
         text = "maintenance"
-        history = []
-        headers = {}
+        history: ClassVar[list] = []
+        headers: ClassVar[dict] = {}
         is_success = False
         is_redirect = False
         url = "https://example.com"
@@ -63,8 +65,8 @@ def test_live_http_success_and_keyword(monkeypatch, settings, limiter) -> None:
     class FakeResponse:
         status_code = 200
         text = "hello expected phrase"
-        history = []
-        headers = {}
+        history: ClassVar[list] = []
+        headers: ClassVar[dict] = {}
         is_success = True
         is_redirect = False
         url = "https://example.com"
@@ -95,8 +97,8 @@ def test_live_http_redirect_is_reported_not_followed(monkeypatch, settings, limi
     class FakeResponse:
         status_code = 302
         text = ""
-        history = []
-        headers = {"location": "https://other.example/"}
+        history: ClassVar[list] = []
+        headers: ClassVar[dict] = {"location": "https://other.example/"}
         is_success = False
         is_redirect = True
         url = "https://example.com"
@@ -118,6 +120,7 @@ def test_live_http_redirect_is_reported_not_followed(monkeypatch, settings, limi
 
 def test_live_http_timeout(monkeypatch, settings, limiter) -> None:
     import httpx
+
     import network_diagnostics_monitor.checks.http as http_check
 
     class FakeClient:
@@ -135,6 +138,7 @@ def test_live_http_timeout(monkeypatch, settings, limiter) -> None:
 
 def test_live_http_connection_error(monkeypatch, settings, limiter) -> None:
     import httpx
+
     import network_diagnostics_monitor.checks.http as http_check
 
     class FakeClient:
@@ -152,6 +156,7 @@ def test_live_http_connection_error(monkeypatch, settings, limiter) -> None:
 
 def test_live_http_invalid_url_rejected(settings) -> None:
     import pytest
+
     from network_diagnostics_monitor.safety import SafetyError
     with pytest.raises(SafetyError, match="HTTP"):
         check_http("ftp://example.com", mode="live", settings=settings)

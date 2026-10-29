@@ -9,8 +9,16 @@ from typer.testing import CliRunner
 from network_diagnostics_monitor.cli import app
 from network_diagnostics_monitor.database import create_schema, make_engine, make_session_factory
 from network_diagnostics_monitor.models import Device, Incident, Metric
-from network_diagnostics_monitor.recommendations import recommendations_as_dicts, recommendations_for
-from network_diagnostics_monitor.reports import build_report, render_csv, render_json, render_markdown
+from network_diagnostics_monitor.recommendations import (
+    recommendations_as_dicts,
+    recommendations_for,
+)
+from network_diagnostics_monitor.reports import (
+    build_report,
+    render_csv,
+    render_json,
+    render_markdown,
+)
 from network_diagnostics_monitor.simulation import seed_devices
 
 

@@ -85,6 +85,7 @@ def test_rate_limiter_zero_interval() -> None:
 
 def test_safe_resolution_checks_addresses(monkeypatch, settings) -> None:
     import socket
+
     from network_diagnostics_monitor.safety import resolve_host_safely
 
     record = (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))
@@ -94,6 +95,7 @@ def test_safe_resolution_checks_addresses(monkeypatch, settings) -> None:
 
 def test_safe_resolution_rejects_private_answer(monkeypatch, settings) -> None:
     import socket
+
     from network_diagnostics_monitor.safety import resolve_host_safely
 
     record = (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.168.1.9", 0))
@@ -104,6 +106,7 @@ def test_safe_resolution_rejects_private_answer(monkeypatch, settings) -> None:
 
 def test_safe_resolution_wraps_os_error(monkeypatch, settings) -> None:
     import socket
+
     from network_diagnostics_monitor.safety import resolve_host_safely
 
     monkeypatch.setattr(socket, "getaddrinfo", lambda *args, **kwargs: (_ for _ in ()).throw(socket.gaierror("failed")))
@@ -122,6 +125,7 @@ def test_explicit_localhost_can_resolve_to_loopback(settings) -> None:
 
 def test_safe_resolution_enforces_timeout(monkeypatch, settings) -> None:
     import time
+
     from network_diagnostics_monitor.safety import resolve_host_safely
 
     def slow_lookup(*args, **kwargs):
