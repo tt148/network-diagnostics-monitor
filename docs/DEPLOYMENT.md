@@ -78,7 +78,7 @@ To restore, stop the app, copy the backup into the named volume using a temporar
 
 ## Optional: Render demonstration
 
-A Docker-based web service can be used for a temporary demonstration, but understand these limitations before publishing:
+A Docker-based web service can be used for a temporary demonstration. Seeded metric history can be replayed with `network-diagnostics seed`, and HTML, Markdown, incident CSV, and per-device CSV reports can be written to protected storage:
 
 1. The API currently has no authentication. Do **not** deploy it to a public URL until authentication/authorization and CSRF protections are implemented and reviewed. The safest choice is to keep the app local.
 2. Free web-service filesystems are generally ephemeral. A SQLite file written inside a container can disappear when the service restarts or redeploys. Do not treat it as durable storage.

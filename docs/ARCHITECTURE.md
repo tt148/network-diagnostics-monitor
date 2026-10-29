@@ -15,9 +15,10 @@ Network Diagnostics Monitor is a small, layered Python application. Everything r
 | `checks/http.py` | HTTP availability, redirects, expected status and keyword assertions, and TLS certificate expiry. |
 | `models.py`, `database.py` | SQLAlchemy 2 models (`Device`, `Metric`, `Incident`), SQLite-first engine and sessions. |
 | `simulation.py` | Ten fictional devices and a deterministic, seeded metric generator with scripted failure scenarios. |
-| `incidents.py` | Threshold evaluation, de-duplication, severity, flapping detection and the incident lifecycle. |
+| `incidents.py` | Chronological replay, threshold evaluation, de-duplication, severity, flapping detection and the incident lifecycle. |
+| `diagnosis.py` | Pure rule-based findings across DNS, reachability, gateway/link quality, application and TLS layers. |
 | `recommendations.py` | Advisory troubleshooting steps keyed by incident type. |
-| `reports.py` | JSON, Markdown and CSV reports built from persisted data. |
+| `reports.py` | JSON, Markdown, formula-safe CSV, self-contained HTML and incident post-mortem reports built from persisted data. |
 | `api.py` | FastAPI application, REST endpoints and the dashboard page. |
 | `cli.py` | Typer command line interface. |
 
@@ -43,13 +44,13 @@ All generated rows carry the source `simulation`. No network traffic is produced
 
 ## Incident engine
 
-Default thresholds live in `incidents.DEFAULT_THRESHOLDS` and can be overridden programmatically. Active (`open` or `acknowledged`) incidents are de-duplicated per device and kind; repeated abnormal readings increase `occurrence_count`. A healthy latest reading resolves the active incident and records its duration. Flapping is detected from up/down transitions in the most recent availability samples.
+Default thresholds live in `incidents.DEFAULT_THRESHOLDS` and can be overridden programmatically. Seeded metrics are replayed chronologically per device and metric; abnormal runs open incidents, normal readings resolve them and record duration, and repeated abnormal samples increase `occurrence_count`. Replaying a seed rebuilds only replay-managed simulated incident kinds, so rerunning is idempotent and manual incidents are preserved. Flapping is detected from availability transitions.
 
 ## Recommendations and reports
 
 Recommendations are transparent rules, not an automated root-cause engine: each incident type maps to ordered actions with a rationale and a way to verify the result. They are advisory and never change configuration or run probes.
 
-Reports can be rendered as JSON, Markdown (summary table plus recommendations) or CSV (one row per incident).
+Reports can be rendered as JSON, Markdown, formula-safe incident CSV, per-device summary CSV, self-contained responsive HTML, or one incident Markdown post-mortem. HTML escapes report values and contains no external assets. CSV cells with spreadsheet formula prefixes are protected with a leading apostrophe.
 
 ## API
 
@@ -82,8 +83,6 @@ The dashboard (`/`) uses plain HTML, CSS and JavaScript with no external CDN. It
 ## Known limitations
 
 - The API has no authentication or CSRF protection; keep it local (see [DEPLOYMENT.md](DEPLOYMENT.md)).
-- Incident evaluation looks at each device's latest measurement, so seeded data produces the current incidents but not a replayed history of past, resolved ones.
 - The dashboard has no charts and no live "diagnose a target" panel yet; the diagnostic engines are available through the CLI.
-- Reports are available as JSON, Markdown and CSV; there is no HTML report or per-incident post-mortem yet.
 - No scheduler or notification delivery.
-- The Docker image and Compose file have not been built in the environment where they were written; run `docker compose build` and confirm `/api/health` before relying on them.
+- No migration tooling is provided yet; schema evolution requires review and a migration workflow.

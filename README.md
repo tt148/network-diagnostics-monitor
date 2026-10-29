@@ -16,9 +16,10 @@ Network problems usually arrive as vague symptoms: "the internet is slow" or "th
 - **Latency and packet loss:** min, average, max, jitter and loss percentage using system `ping`, with an automatic TCP-connect fallback when ICMP is unavailable.
 - **HTTP and TLS checks:** status code, response time, redirects, expected-status and keyword assertions, certificate validity and days until expiry.
 - **Simulated monitoring data:** ten fictional devices with deterministic, seeded history and scripted failures (DNS outage, packet loss, HTTP 503, flapping, certificate nearing expiry).
-- **Incident engine:** thresholds, severity, de-duplication, flapping detection and an open, acknowledged, resolved lifecycle.
+- **Incident engine:** replayed history, thresholds, severity, de-duplication, flapping detection and an open, acknowledged, resolved lifecycle.
+- **Diagnosis engine:** DNS, reachability, path quality, application and TLS findings with confidence, evidence and ordered next steps.
 - **Troubleshooting recommendations:** ordered, advisory steps for each incident type, with a rationale and a way to verify each step.
-- **Reports:** JSON, Markdown and CSV exports of incidents and recommendations.
+- **Reports:** self-contained HTML, incident Markdown post-mortems, per-device CSV summaries, formula-safe CSV exports, and JSON/Markdown reports.
 - **REST API and dashboard:** FastAPI with interactive OpenAPI docs, and a responsive dashboard that follows the system light or dark theme.
 - **Safety by design:** allowlisted targets, blocked private and metadata ranges, bounded and rate-limited probes, no port scanning.
 
@@ -41,6 +42,9 @@ network-diagnostics seed                      # fictional devices, metrics and i
 network-diagnostics incidents --status open
 network-diagnostics recommendations 1
 network-diagnostics report --format markdown
+network-diagnostics report --format html --output report.html
+network-diagnostics report --format postmortem --incident-id 1 --output postmortem.md
+network-diagnostics report --format device-csv --output devices.csv
 ```
 
 Start the API and dashboard:
@@ -106,7 +110,6 @@ Add real screenshots to `docs/screenshots/` and reference them here:
 ## Roadmap
 
 - Per-device latency and loss charts, and a live "diagnose a target" panel on the dashboard
-- Replayed incident history for seeded data, plus HTML reports and per-incident post-mortems
 - Authentication for the API and write actions
 - Scheduled live checks and notifications
 
