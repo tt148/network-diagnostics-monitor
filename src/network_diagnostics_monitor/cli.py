@@ -17,7 +17,15 @@ from .diagnosis import diagnose_target
 from .incidents import acknowledge_incident, replay_incidents, resolve_incident
 from .models import Incident
 from .recommendations import recommendations_as_dicts
-from .reports import build_report, render_csv, render_json, render_markdown
+from .reports import (
+    build_report,
+    render_csv,
+    render_device_summary_csv,
+    render_html,
+    render_incident_postmortem,
+    render_json,
+    render_markdown,
+)
 from .safety import RateLimiter, SafetyError
 from .simulation import generate_metrics, seed_devices
 
@@ -210,17 +218,31 @@ def report(
     output: Annotated[
         str | None, typer.Option("--output", help="Optional output file path.")
     ] = None,
+    incident_id: Annotated[
+        int | None, typer.Option("--incident-id", help="Incident ID for a post-mortem report.")
+    ] = None,
 ) -> None:
-    """Generate a monitoring and incident report; optionally write it to a file."""
-    if format not in {"json", "markdown", "csv"}:
-        raise typer.BadParameter("format must be json, markdown, or csv")
+    """Generate monitoring, HTML, post-mortem, or per-device reports."""
+    if format not in {"json", "markdown", "csv", "html", "postmortem", "device-csv"}:
+        raise typer.BadParameter("format must be json, markdown, csv, html, postmortem, or device-csv")
     engine = make_engine()
     create_schema(engine)
     factory = make_session_factory(engine)
     with factory() as session:
         report_data = build_report(session)
-    renderers = {"json": render_json, "markdown": render_markdown, "csv": render_csv}
-    rendered = renderers[format](report_data)
+    if format == "postmortem":
+        if incident_id is None:
+            raise typer.BadParameter("--incident-id is required for postmortem format")
+        rendered = render_incident_postmortem(report_data, incident_id)
+    else:
+        renderers = {
+            "json": render_json,
+            "markdown": render_markdown,
+            "csv": render_csv,
+            "html": render_html,
+            "device-csv": render_device_summary_csv,
+        }
+        rendered = renderers[format](report_data)
     if output:
         destination = Path(output).expanduser()
         destination.parent.mkdir(parents=True, exist_ok=True)

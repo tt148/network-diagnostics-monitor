@@ -16,6 +16,9 @@ from network_diagnostics_monitor.recommendations import (
 from network_diagnostics_monitor.reports import (
     build_report,
     render_csv,
+    render_device_summary_csv,
+    render_html,
+    render_incident_postmortem,
     render_json,
     render_markdown,
 )
@@ -123,6 +126,77 @@ def test_report_renderers_produce_valid_json_markdown_and_csv():
         engine.dispose()
 
 
+def test_html_report_is_self_contained_and_escapes_values():
+    engine, session = _session()
+    try:
+        incident = _incident(session, "http_error")
+        incident.title = "<script>alert('x')</script>"
+        session.flush()
+        report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=UTC))
+        rendered = render_html(report)
+        assert "<!doctype html>" in rendered
+        assert "<script>" not in rendered
+        assert "&lt;script&gt;" in rendered
+        assert "@media(prefers-color-scheme:dark)" in rendered
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_postmortem_and_device_csv_include_required_sections():
+    engine, session = _session()
+    try:
+        seed_devices(session)
+        incident = _incident(session, "dns_degradation")
+        session.flush()
+        report = build_report(session, generated_at=datetime(2026, 10, 21, tzinfo=UTC))
+        postmortem = render_incident_postmortem(report, incident.id)
+        assert "## Summary" in postmortem
+        assert "## Timeline" in postmortem
+        assert "## Impact" in postmortem
+        assert "## Likely cause" in postmortem
+        assert "## Resolution steps" in postmortem
+        assert "## Prevention" in postmortem
+        assert "DNS" in postmortem
+
+        device_csv = render_device_summary_csv(report)
+        rows = list(csv.DictReader(device_csv.splitlines()))
+        assert len(rows) == 10
+        assert {"name", "metric_count", "incident_count", "active_incident_count"} <= set(rows[0])
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_csv_guards_spreadsheet_formula_injection():
+    report = {
+        "incidents": [
+            {
+                "id": 1,
+                "device": "=HYPERLINK(\"x\")",
+                "device_type": "router",
+                "kind": "test",
+                "title": "+CMD('bad')",
+                "description": "@SUM(1,1)",
+                "severity": "warning",
+                "status": "open",
+                "started_at": None,
+                "acknowledged_at": None,
+                "acknowledged_by": None,
+                "resolved_at": None,
+                "duration_seconds": 1,
+                "occurrence_count": 1,
+                "is_flapping": False,
+                "recommendations": [],
+            }
+        ]
+    }
+    rendered = render_csv(report)
+    assert "'=HYPERLINK" in rendered
+    assert "'+CMD" in rendered
+    assert "'@SUM" in rendered
+
+
 def test_empty_report_rendering_is_valid():
     engine, session = _session()
     try:
@@ -147,10 +221,27 @@ def test_cli_report_writes_requested_file(tmp_path, monkeypatch):
     assert json.loads(output.read_text(encoding="utf-8"))["summary"]["device_count"] == 0
 
 
+def test_cli_html_report_writes_requested_file(tmp_path, monkeypatch):
+    db_path = tmp_path / "cli.db"
+    monkeypatch.setenv("NDM_DATABASE_URL", f"sqlite:///{db_path}")
+    output = tmp_path / "report.html"
+    result = CliRunner().invoke(app, ["report", "--format", "html", "--output", str(output)])
+    assert result.exit_code == 0, result.output
+    assert "<!doctype html>" in output.read_text(encoding="utf-8")
+
+
+def test_cli_postmortem_requires_incident_id(tmp_path, monkeypatch):
+    monkeypatch.setenv("NDM_DATABASE_URL", f"sqlite:///{tmp_path / 'cli.db'}")
+    result = CliRunner().invoke(app, ["report", "--format", "postmortem"])
+    assert result.exit_code != 0
+    assert "--incident-id is required" in result.output
+
+
 def test_cli_rejects_unknown_report_format():
     result = CliRunner().invoke(app, ["report", "--format", "xml"])
     assert result.exit_code != 0
-    assert "format must be json, markdown, or csv" in result.output
+    assert "Invalid value:" in result.output
+    assert "device-csv" in result.output
 
 
 def test_cli_recommendations_for_missing_incident_is_friendly(tmp_path, monkeypatch):
