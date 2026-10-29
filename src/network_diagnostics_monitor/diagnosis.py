@@ -18,8 +18,14 @@ def diagnose_target(
     dns_errors = dns.get("errors", {})
     dns_records = dns.get("records", {})
     a_records = dns_records.get("A", []) if isinstance(dns_records, dict) else []
-    dns_failed = bool(dns_errors) or dns.get("status") in {"error"} or (
-        not a_records and bool(dns_records) and target not in {str(address) for address in _ip_addresses(target)}
+    dns_failed = (
+        bool(dns_errors)
+        or dns.get("status") in {"error"}
+        or (
+            not a_records
+            and bool(dns_records)
+            and target not in {str(address) for address in _ip_addresses(target)}
+        )
     )
 
     loss = float(latency.get("packet_loss_percent", 0.0) or 0.0)
@@ -40,7 +46,10 @@ def diagnose_target(
                 "confidence": "high",
                 "evidence": [
                     f"DNS status: {dns.get('status', 'unknown')}",
-                    *[f"DNS {record_type}: {message}" for record_type, message in dns_errors.items()],
+                    *[
+                        f"DNS {record_type}: {message}"
+                        for record_type, message in dns_errors.items()
+                    ],
                 ],
                 "next_steps": [
                     "Verify the hostname and configured search domains.",
@@ -51,9 +60,7 @@ def diagnose_target(
         )
 
     if samples_received == 0:
-        diagnosis = (
-            "No probe reached the target; the path may fail at link, gateway, routing, or firewall layers."
-        )
+        diagnosis = "No probe reached the target; the path may fail at link, gateway, routing, or firewall layers."
         findings.append(
             {
                 "layer": "reachability",
@@ -115,7 +122,10 @@ def diagnose_target(
                 "layer": "tls",
                 "diagnosis": "TLS certificate validation failed.",
                 "confidence": "high",
-                "evidence": ["TLS validation result: invalid", *([f"Certificate error: {tls['error']}"] if tls.get("error") else [])],
+                "evidence": [
+                    "TLS validation result: invalid",
+                    *([f"Certificate error: {tls['error']}"] if tls.get("error") else []),
+                ],
                 "next_steps": [
                     "Verify the certificate chain, hostname, trust store, and validity dates.",
                     "Renew or replace the certificate if it is expired or misconfigured.",

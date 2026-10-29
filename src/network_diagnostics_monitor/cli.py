@@ -56,24 +56,18 @@ def diagnose(
         raise typer.BadParameter("mode must be 'simulated' or 'live'")
     limiter = RateLimiter(settings.min_check_interval_seconds)
     try:
-        dns_result = check_dns(
-            target, mode=selected_mode, settings=settings, limiter=limiter
-        )
+        dns_result = check_dns(target, mode=selected_mode, settings=settings, limiter=limiter)
         latency_result = check_latency(
             target, mode=selected_mode, settings=settings, limiter=limiter
         )
-        http_result = check_http(
-            target, mode=selected_mode, settings=settings, limiter=limiter
-        )
+        http_result = check_http(target, mode=selected_mode, settings=settings, limiter=limiter)
         result = {
             "target": target,
             "mode": selected_mode,
             "dns": dns_result,
             "latency": latency_result,
             "http": http_result,
-            "diagnosis": diagnose_target(
-                target, dns_result, latency_result, http_result
-            ),
+            "diagnosis": diagnose_target(target, dns_result, latency_result, http_result),
         }
     except (SafetyError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
@@ -224,7 +218,9 @@ def report(
 ) -> None:
     """Generate monitoring, HTML, post-mortem, or per-device reports."""
     if format not in {"json", "markdown", "csv", "html", "postmortem", "device-csv"}:
-        raise typer.BadParameter("format must be json, markdown, csv, html, postmortem, or device-csv")
+        raise typer.BadParameter(
+            "format must be json, markdown, csv, html, postmortem, or device-csv"
+        )
     engine = make_engine()
     create_schema(engine)
     factory = make_session_factory(engine)

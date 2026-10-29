@@ -5,9 +5,9 @@ from __future__ import annotations
 import csv
 import io
 import json
-from html import escape
 from collections import Counter
 from datetime import UTC, datetime
+from html import escape
 from typing import Any
 
 from sqlalchemy import func, select
@@ -87,9 +87,7 @@ def build_report(session: Session, *, generated_at: datetime | None = None) -> d
                     select(func.count(Metric.id)).where(Metric.device_id == device.id)
                 )
                 or 0,
-                "incident_count": sum(
-                    item["device"] == device.name for item in incident_rows
-                ),
+                "incident_count": sum(item["device"] == device.name for item in incident_rows),
                 "active_incident_count": sum(
                     item["device"] == device.name and item["status"] in {"open", "acknowledged"}
                     for item in incident_rows
@@ -162,17 +160,20 @@ def render_markdown(report: dict[str, Any]) -> str:
 def render_html(report: dict[str, Any]) -> str:
     """Render a self-contained responsive HTML report with escaped values."""
     summary = report["summary"]
-    rows = "".join(
-        "<tr>"
-        f"<td>{escape(str(incident['id']))}</td>"
-        f"<td>{escape(str(incident['device']))}</td>"
-        f"<td>{escape(str(incident['title']))}</td>"
-        f"<td>{escape(str(incident['severity']))}</td>"
-        f"<td>{escape(str(incident['status']))}</td>"
-        f"<td>{escape(str(round(float(incident['duration_seconds']), 2)))}</td>"
-        "</tr>"
-        for incident in report["incidents"]
-    ) or '<tr><td colspan="6">No incidents recorded</td></tr>'
+    rows = (
+        "".join(
+            "<tr>"
+            f"<td>{escape(str(incident['id']))}</td>"
+            f"<td>{escape(str(incident['device']))}</td>"
+            f"<td>{escape(str(incident['title']))}</td>"
+            f"<td>{escape(str(incident['severity']))}</td>"
+            f"<td>{escape(str(incident['status']))}</td>"
+            f"<td>{escape(str(round(float(incident['duration_seconds']), 2)))}</td>"
+            "</tr>"
+            for incident in report["incidents"]
+        )
+        or '<tr><td colspan="6">No incidents recorded</td></tr>'
+    )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network Diagnostics Monitor Report</title>
@@ -180,8 +181,8 @@ def render_html(report: dict[str, Any]) -> str:
 :root{{color-scheme:light dark;--bg:#f5f7fa;--panel:#fff;--text:#172033;--muted:#5f6b7a;--line:#d8dee8}}@media(prefers-color-scheme:dark){{:root{{--bg:#12151b;--panel:#1b2029;--text:#edf1f7;--muted:#b3bdca;--line:#343b48}}}}
 *{{box-sizing:border-box}}body{{margin:0;font-family:ui-sans-serif,system-ui,sans-serif;background:var(--bg);color:var(--text)}}main{{max-width:1100px;margin:0 auto;padding:24px}}.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}}.card{{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}}.card strong{{display:block;font-size:1.6rem}}.table-wrap{{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px}}table{{width:100%;border-collapse:collapse}}th,td{{padding:10px;text-align:left;border-bottom:1px solid var(--line)}}th{{color:var(--muted)}}@media(max-width:600px){{main{{padding:12px}}}}
 </style></head><body><main>
-<h1>Network Diagnostics Monitor Report</h1><p>Generated: {escape(str(report['generated_at']))}</p>
-<section class="cards"><article class="card"><strong>{escape(str(summary['device_count']))}</strong>Devices</article><article class="card"><strong>{escape(str(summary['metric_count']))}</strong>Metrics</article><article class="card"><strong>{escape(str(summary['incident_count']))}</strong>Incidents</article><article class="card"><strong>{escape(str(summary['active_incident_count']))}</strong>Active</article></section>
+<h1>Network Diagnostics Monitor Report</h1><p>Generated: {escape(str(report["generated_at"]))}</p>
+<section class="cards"><article class="card"><strong>{escape(str(summary["device_count"]))}</strong>Devices</article><article class="card"><strong>{escape(str(summary["metric_count"]))}</strong>Metrics</article><article class="card"><strong>{escape(str(summary["incident_count"]))}</strong>Incidents</article><article class="card"><strong>{escape(str(summary["active_incident_count"]))}</strong>Active</article></section>
 <h2>Incidents</h2><div class="table-wrap"><table><thead><tr><th>ID</th><th>Device</th><th>Incident</th><th>Severity</th><th>Status</th><th>Duration (s)</th></tr></thead><tbody>{rows}</tbody></table></div>
 </main></body></html>
 """
@@ -192,13 +193,8 @@ def render_incident_postmortem(report: dict[str, Any], incident_id: int) -> str:
     incident = next((item for item in report["incidents"] if item["id"] == incident_id), None)
     if incident is None:
         raise ValueError("incident was not found")
-    recommendations = "; ".join(
-        str(item["action"])
-        for item in incident["recommendations"][:5]
-    )
-    timeline = "\n".join(
-        _timeline_lines(incident)
-    )
+    recommendations = "; ".join(str(item["action"]) for item in incident["recommendations"][:5])
+    timeline = "\n".join(_timeline_lines(incident))
     resolution = recommendations or "Confirm the incident is resolved and document the remediation."
     return "\n".join(
         [
@@ -296,7 +292,9 @@ def _spreadsheet_safe(value: Any) -> Any:
 def _timeline_lines(incident: dict[str, Any]) -> str:
     lines = [f"- {incident['started_at']} — Incident opened"]
     if incident["acknowledged_at"]:
-        lines.append(f"- {incident['acknowledged_at']} — Acknowledged by {incident['acknowledged_by'] or 'technician'}")
+        lines.append(
+            f"- {incident['acknowledged_at']} — Acknowledged by {incident['acknowledged_by'] or 'technician'}"
+        )
     if incident["resolved_at"]:
         lines.append(f"- {incident['resolved_at']} — Incident resolved")
     return "\n".join(lines)
@@ -311,7 +309,10 @@ def _likely_cause(kind: str) -> str:
         "http_error": "An HTTP 5xx response suggests an application, dependency, reverse-proxy, or server-side failure.",
         "tls_expiry": "TLS findings suggest certificate validity, renewal automation, or certificate chain configuration issues.",
         "device_flapping": "Repeated state changes suggest unstable reachability, an interface, gateway, or upstream path.",
-    }.get(kind, "The likely cause is inconclusive; correlate the incident description with application and network telemetry.")
+    }.get(
+        kind,
+        "The likely cause is inconclusive; correlate the incident description with application and network telemetry.",
+    )
 
 
 def _iso(value: datetime | None) -> str | None:

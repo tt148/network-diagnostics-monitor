@@ -173,7 +173,7 @@ def test_csv_guards_spreadsheet_formula_injection():
         "incidents": [
             {
                 "id": 1,
-                "device": "=HYPERLINK(\"x\")",
+                "device": '=HYPERLINK("x")',
                 "device_type": "router",
                 "kind": "test",
                 "title": "+CMD('bad')",
