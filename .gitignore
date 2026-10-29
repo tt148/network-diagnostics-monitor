@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+.env
+reports/*
+!reports/.gitkeep
+dist/
+build/
+.DS_Store
+
+# Local monitoring database
+*.db
+*.sqlite
+*.sqlite3
+
+# Local backups
+backups/
