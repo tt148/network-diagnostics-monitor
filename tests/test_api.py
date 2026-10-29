@@ -196,6 +196,13 @@ def test_reports_and_dashboard_render(tmp_path):
         assert dashboard.status_code == 200
         assert "Network Diagnostics Monitor" in dashboard.text
         assert "/api/incidents" in dashboard.text
+        assert "latency-chart" in dashboard.text
+        assert "loss-chart" in dashboard.text
+        assert "Device detail" in dashboard.text
+        assert "Incident timeline" in dashboard.text
+        assert "Diagnose a target" in dashboard.text
+        assert "ndm-api-key" in dashboard.text
+        assert "sessionStorage" in dashboard.text
         assert client.get("/dashboard").status_code == 200
         assert client.get("/docs").status_code == 200
     finally:
