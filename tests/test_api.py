@@ -175,6 +175,9 @@ def test_optional_api_key_protects_all_post_endpoints(tmp_path):
         )
         assert correct.status_code == 200
 
+        app.state.settings.api_key = ""
+        assert client.post("/api/diagnose", json={"target": "example.com"}).status_code == 200
+
         app.state.settings.api_key = None
         assert client.post(f"/api/incidents/{incident_id}/resolve", json={}).status_code == 200
     finally:

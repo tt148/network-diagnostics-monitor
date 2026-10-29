@@ -159,7 +159,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
     def require_api_key(request: Request) -> None:
         configured_key = api.state.settings.api_key
-        if configured_key is None:
+        if not configured_key:
             return
         supplied_key = request.headers.get("X-API-Key", "")
         if not compare_digest(supplied_key, configured_key):
