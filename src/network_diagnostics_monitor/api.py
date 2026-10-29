@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
+from . import __version__
 from .database import create_schema, make_engine, make_session_factory
 from .incidents import acknowledge_incident, incident_duration_seconds, resolve_incident
 from .models import Device, Incident, Metric
@@ -118,7 +119,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     session_factory = make_session_factory(engine)
     api = FastAPI(
         title="Network Diagnostics Monitor API",
-        version="0.4.0",
+        version=__version__,
         description=(
             "Read-only monitoring inventory, metrics, incidents, recommendations, and reports. "
             "Incident lifecycle actions are available; network probes are not exposed through this API."
