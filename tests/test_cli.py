@@ -12,6 +12,8 @@ def test_diagnose_defaults_to_simulated(monkeypatch) -> None:
     assert result.exit_code == 0, result.output
     assert '"mode": "simulated"' in result.output
     assert "no HTTP request" in result.output
+    assert '"findings"' in result.output
+    assert '"layer": "application"' in result.output
 
 
 def test_diagnose_rejects_unknown_mode() -> None:

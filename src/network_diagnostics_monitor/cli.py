@@ -13,6 +13,7 @@ from .checks.http import check_http
 from .checks.latency import check_latency
 from .config import Settings, get_settings
 from .database import create_schema, make_engine, make_session_factory
+from .diagnosis import diagnose_target
 from .incidents import acknowledge_incident, replay_incidents, resolve_incident
 from .models import Incident
 from .recommendations import recommendations_as_dicts
@@ -47,14 +48,24 @@ def diagnose(
         raise typer.BadParameter("mode must be 'simulated' or 'live'")
     limiter = RateLimiter(settings.min_check_interval_seconds)
     try:
+        dns_result = check_dns(
+            target, mode=selected_mode, settings=settings, limiter=limiter
+        )
+        latency_result = check_latency(
+            target, mode=selected_mode, settings=settings, limiter=limiter
+        )
+        http_result = check_http(
+            target, mode=selected_mode, settings=settings, limiter=limiter
+        )
         result = {
             "target": target,
             "mode": selected_mode,
-            "dns": check_dns(target, mode=selected_mode, settings=settings, limiter=limiter),
-            "latency": check_latency(
-                target, mode=selected_mode, settings=settings, limiter=limiter
+            "dns": dns_result,
+            "latency": latency_result,
+            "http": http_result,
+            "diagnosis": diagnose_target(
+                target, dns_result, latency_result, http_result
             ),
-            "http": check_http(target, mode=selected_mode, settings=settings, limiter=limiter),
         }
     except (SafetyError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
