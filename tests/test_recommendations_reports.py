@@ -1,4 +1,4 @@
-"""Tests for Stage 3 troubleshooting recommendations and report exports."""
+"""Tests for troubleshooting recommendations and report exports."""
 
 import csv
 import json

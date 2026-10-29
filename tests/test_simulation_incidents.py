@@ -1,4 +1,4 @@
-"""Regression tests for Stage 2 persistence, simulation, and incidents."""
+"""Tests for persistence, the metric simulator, and the incident engine."""
 
 from datetime import UTC, datetime, timedelta
 

@@ -1,4 +1,4 @@
-"""API and dashboard regression tests for Stage 4."""
+"""API and dashboard tests using a temporary SQLite database."""
 
 from datetime import UTC, datetime
 
@@ -11,7 +11,7 @@ from network_diagnostics_monitor.simulation import generate_metrics, seed_device
 
 
 def _client(tmp_path):
-    database = tmp_path / "stage4-test.db"
+    database = tmp_path / "api-test.db"
     app = create_app(f"sqlite:///{database}")
     client = TestClient(app)
     factory = make_session_factory(app.state.engine)
