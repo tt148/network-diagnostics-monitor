@@ -30,6 +30,20 @@ def _client(tmp_path):
             last_observed_at=datetime(2026, 10, 28, 0, 5, tzinfo=UTC),
         )
         session.add(incident)
+        session.add(
+            Incident(
+                device_id=device.id,
+                kind="http_error",
+                title=f"{device.name}: HTTP 503 burst",
+                description="Synthetic resolved HTTP 503 incident",
+                severity="critical",
+                status="resolved",
+                started_at=datetime(2026, 10, 27, 6, tzinfo=UTC),
+                resolved_at=datetime(2026, 10, 27, 11, tzinfo=UTC),
+                duration_seconds=18000,
+                last_observed_at=datetime(2026, 10, 27, 11, tzinfo=UTC),
+            )
+        )
     return app, client
 
 
@@ -44,6 +58,8 @@ def test_health_and_summary_endpoints(tmp_path):
         assert summary["simulated_device_count"] == 10
         assert summary["metric_count"] > 0
         assert summary["active_incident_count"] == 1
+        assert summary["resolved_incident_count"] == 1
+        assert summary["status_counts"] == {"open": 1, "resolved": 1}
     finally:
         app.state.engine.dispose()
 
@@ -134,6 +150,13 @@ def test_report_html_postmortem_and_metric_series(tmp_path):
         assert html_report.headers["content-type"].startswith("text/html")
         assert "<!doctype html>" in html_report.text
 
+        incidents = client.get("/api/incidents?status=resolved").json()
+        assert len(incidents) == 1
+        resolved_incident_id = incidents[0]["id"]
+        resolved_postmortem = client.get(f"/api/incidents/{resolved_incident_id}/postmortem")
+        assert resolved_postmortem.status_code == 200
+        assert "Resolved" in resolved_postmortem.text
+
         incidents = client.get("/api/incidents").json()
         incident_id = incidents[0]["id"]
         postmortem = client.get(f"/api/incidents/{incident_id}/postmortem")
@@ -205,6 +228,8 @@ def test_reports_and_dashboard_render(tmp_path):
         assert "Incident timeline" in dashboard.text
         assert "Diagnose a target" in dashboard.text
         assert "ndm-api-key" in dashboard.text
+        assert "Resolved incidents" in dashboard.text
+        assert "resolved-count" in dashboard.text
         assert "sessionStorage" in dashboard.text
         assert client.get("/dashboard").status_code == 200
         assert client.get("/docs").status_code == 200

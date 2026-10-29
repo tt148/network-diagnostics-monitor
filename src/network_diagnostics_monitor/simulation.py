@@ -107,8 +107,8 @@ def generate_metrics(
                 55 <= hour_index % 120 <= 62 or current >= end - step * 3
             ):
                 latency, loss = 155.0, 9.0
-            if device.name == "access-point-02" and hour_index % 24 in {3, 4, 5, 6, 7, 8}:
-                availability = 0.0 if hour_index % 24 in {4, 6, 8} else 1.0
+            # Access-point history stays healthy so it does not obscure the
+            # three primary resolved incidents with many one-hour outages.
             # Certificate remaining validity is a synthetic metric in days.
             cert_days = 9.0 if device.name == "web-server-01" else 180.0
 

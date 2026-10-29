@@ -66,6 +66,13 @@ def test_replay_creates_resolved_and_open_history_idempotently(session):
     assert {incident.status for incident in incidents} >= {"open", "resolved"}
 
     resolved = [incident for incident in incidents if incident.status == "resolved"]
+    resolved_kinds = {incident.kind for incident in resolved}
+    assert {"dns_degradation", "high_latency", "http_error"} <= resolved_kinds
+    resolved_by_kind = {incident.kind: incident for incident in resolved}
+    assert resolved_by_kind["dns_degradation"].duration_seconds >= 3 * 3600
+    assert resolved_by_kind["high_latency"].duration_seconds >= 5 * 3600
+    assert resolved_by_kind["http_error"].duration_seconds >= 4 * 3600
+
     assert resolved
     assert all(incident.resolved_at is not None for incident in resolved)
     assert all(incident.duration_seconds is not None for incident in resolved)
@@ -75,6 +82,21 @@ def test_replay_creates_resolved_and_open_history_idempotently(session):
     session.commit()
     assert len(session.scalars(select(Incident)).all()) == count_before
     assert replay_again
+
+
+def test_seeded_history_contains_multiple_resolved_and_open_incidents(session):
+    end = datetime(2026, 10, 20, 12, tzinfo=UTC)
+    generate_metrics(session, days=3, interval_minutes=60, seed=42, end_time=end)
+    replay_incidents(session)
+    session.commit()
+
+    statuses = session.scalars(select(Incident.status)).all()
+    resolved = session.scalars(select(Incident).where(Incident.status == "resolved")).all()
+    open_incidents = session.scalars(select(Incident).where(Incident.status == "open")).all()
+    assert "resolved" in statuses and "open" in statuses
+    assert len(resolved) >= 3
+    assert len(open_incidents) >= 2
+    assert all(incident.duration_seconds and incident.duration_seconds > 0 for incident in resolved)
 
 
 def test_replay_manual_incident_is_preserved(session):

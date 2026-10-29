@@ -71,6 +71,7 @@ def build_report(session: Session, *, generated_at: datetime | None = None) -> d
             "active_incident_count": sum(
                 item.status in {"open", "acknowledged"} for item in incidents
             ),
+            "resolved_incident_count": sum(item.status == "resolved" for item in incidents),
             "status_counts": dict(sorted(status_counts.items())),
             "severity_counts": dict(sorted(severity_counts.items())),
             "oldest_metric_at": _iso(oldest_metric),
@@ -113,7 +114,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Generated: {report['generated_at']}",
         f"- Devices: {summary['device_count']} ({summary['simulated_device_count']} simulated)",
         f"- Metrics: {summary['metric_count']}",
-        f"- Incidents: {summary['incident_count']} ({summary['active_incident_count']} active)",
+        f"- Incidents: {summary['incident_count']} ({summary['active_incident_count']} active, {summary.get('resolved_incident_count', 0)} resolved)",
         f"- Metric window: {summary['oldest_metric_at'] or 'No metrics'} to {summary['newest_metric_at'] or 'No metrics'}",
         "",
         "## Incident summary",
@@ -182,7 +183,7 @@ def render_html(report: dict[str, Any]) -> str:
 *{{box-sizing:border-box}}body{{margin:0;font-family:ui-sans-serif,system-ui,sans-serif;background:var(--bg);color:var(--text)}}main{{max-width:1100px;margin:0 auto;padding:24px}}.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}}.card{{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}}.card strong{{display:block;font-size:1.6rem}}.table-wrap{{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px}}table{{width:100%;border-collapse:collapse}}th,td{{padding:10px;text-align:left;border-bottom:1px solid var(--line)}}th{{color:var(--muted)}}@media(max-width:600px){{main{{padding:12px}}}}
 </style></head><body><main>
 <h1>Network Diagnostics Monitor Report</h1><p>Generated: {escape(str(report["generated_at"]))}</p>
-<section class="cards"><article class="card"><strong>{escape(str(summary["device_count"]))}</strong>Devices</article><article class="card"><strong>{escape(str(summary["metric_count"]))}</strong>Metrics</article><article class="card"><strong>{escape(str(summary["incident_count"]))}</strong>Incidents</article><article class="card"><strong>{escape(str(summary["active_incident_count"]))}</strong>Active</article></section>
+<section class="cards"><article class="card"><strong>{escape(str(summary["device_count"]))}</strong>Devices</article><article class="card"><strong>{escape(str(summary["metric_count"]))}</strong>Metrics</article><article class="card"><strong>{escape(str(summary["incident_count"]))}</strong>Incidents</article><article class="card"><strong>{escape(str(summary["active_incident_count"]))}</strong>Active</article><article class="card"><strong>{escape(str(summary.get("resolved_incident_count", 0)))}</strong>Resolved</article></section>
 <h2>Incidents</h2><div class="table-wrap"><table><thead><tr><th>ID</th><th>Device</th><th>Incident</th><th>Severity</th><th>Status</th><th>Duration (s)</th></tr></thead><tbody>{rows}</tbody></table></div>
 </main></body></html>
 """

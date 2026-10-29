@@ -37,6 +37,7 @@ def _incident(session, kind="high_latency", *, status="open"):
     if device is None:
         device = seed_devices(session)[0]
     start = datetime(2026, 10, 20, tzinfo=UTC)
+    resolved_at = start + timedelta(hours=5) if status == "resolved" else None
     incident = Incident(
         device_id=device.id,
         kind=kind,
@@ -46,6 +47,8 @@ def _incident(session, kind="high_latency", *, status="open"):
         status=status,
         started_at=start,
         last_observed_at=start + timedelta(minutes=5),
+        resolved_at=resolved_at,
+        duration_seconds=18000 if resolved_at else None,
     )
     session.add(incident)
     session.flush()
@@ -83,7 +86,7 @@ def test_report_summary_and_incident_recommendations():
     engine, session = _session()
     try:
         seed_devices(session)
-        _incident(session, "tls_expiry")
+        _incident(session, "tls_expiry", status="resolved")
         session.add(
             Metric(
                 device_id=session.query(Device).first().id,
@@ -101,6 +104,8 @@ def test_report_summary_and_incident_recommendations():
         assert report["summary"]["simulated_device_count"] == 10
         assert report["summary"]["metric_count"] == 1
         assert report["summary"]["incident_count"] == 1
+        assert report["summary"]["resolved_incident_count"] == 1
+        assert report["summary"]["active_incident_count"] == 0
         assert report["incidents"][0]["recommendations"]
         assert report["incidents"][0]["device"]
     finally:

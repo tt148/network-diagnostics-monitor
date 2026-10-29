@@ -15,7 +15,7 @@ Network problems usually arrive as vague symptoms: "the internet is slow" or "th
 - **DNS checks:** A, AAAA, CNAME, MX, NS and TXT lookups, resolution timing, NXDOMAIN, SERVFAIL and timeout detection, and a two-resolver comparison.
 - **Latency and packet loss:** min, average, max, jitter and loss percentage using system `ping`, with an automatic TCP-connect fallback when ICMP is unavailable.
 - **HTTP and TLS checks:** status code, response time, redirects, expected-status and keyword assertions, certificate validity and days until expiry.
-- **Simulated monitoring data:** ten fictional devices with deterministic, seeded history and scripted failures (DNS outage, packet loss, HTTP 503, flapping, certificate nearing expiry).
+- **Simulated monitoring data:** ten fictional devices with deterministic, seeded history, resolved DNS/latency/HTTP incidents with durations, several open VPN/TLS incidents, and replay that stays idempotent.
 - **Incident engine:** replayed history, thresholds, severity, de-duplication, flapping detection and an open, acknowledged, resolved lifecycle.
 - **Diagnosis engine:** DNS, reachability, path quality, application and TLS findings with confidence, evidence and ordered next steps.
 - **Troubleshooting recommendations:** ordered, advisory steps for each incident type, with a rationale and a way to verify each step.
@@ -39,7 +39,8 @@ cp .env.example .env
 
 network-diagnostics diagnose example.com      # simulated, no network traffic
 network-diagnostics seed                      # fictional devices, metrics and incidents
-network-diagnostics incidents --status open
+network-diagnostics incidents --status open   # current VPN/TLS incidents stay open
+network-diagnostics incidents --status resolved
 network-diagnostics recommendations 1
 network-diagnostics report --format markdown
 network-diagnostics report --format html --output report.html

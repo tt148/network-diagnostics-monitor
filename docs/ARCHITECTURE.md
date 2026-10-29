@@ -34,13 +34,13 @@ The schema is created with SQLAlchemy `create_all`; there is no migration toolin
 
 `network-diagnostics seed` creates ten fictional devices and generates deterministic metric history (default: three days, hourly) from a fixed random seed. Re-running the same window does not duplicate rows. The scripted scenarios are:
 
-- DNS outage on the DNS server
-- High latency and packet loss on the edge router and VPN gateway
-- HTTP 503 responses on the web server
-- Intermittent availability on an access point (flapping)
-- A synthetic TLS certificate close to expiry
+- A resolved DNS degradation and availability outage on the DNS server
+- Resolved high-latency and packet-loss episodes on the edge router
+- A resolved HTTP 503 burst and availability outage on the web server
+- Current open latency and packet-loss incidents on the VPN gateway
+- A synthetic TLS certificate close to expiry that remains open
 
-All generated rows carry the source `simulation`. No network traffic is produced.
+With the default three-day, hourly seed, replay produces 11 incident rows: 8 resolved episodes and 3 current open incidents for the fixed seed. Re-running seed keeps that row count stable. All generated rows carry the source `simulation`. No network traffic is produced.
 
 ## Incident engine
 
