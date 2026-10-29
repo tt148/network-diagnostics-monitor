@@ -20,7 +20,7 @@ Network problems usually arrive as vague symptoms: "the internet is slow" or "th
 - **Diagnosis engine:** DNS, reachability, path quality, application and TLS findings with confidence, evidence and ordered next steps.
 - **Troubleshooting recommendations:** ordered, advisory steps for each incident type, with a rationale and a way to verify each step.
 - **Reports:** self-contained HTML, incident Markdown post-mortems, per-device CSV summaries, formula-safe CSV exports, and JSON/Markdown reports.
-- **REST API and dashboard:** FastAPI with interactive OpenAPI docs, and a responsive dashboard that follows the system light or dark theme.
+- **REST API and dashboard:** diagnosis and report endpoints, optional POST API-key protection, and a responsive inline-SVG dashboard with device detail, incident timeline, latency/loss charts and diagnosis controls.
 - **Safety by design:** allowlisted targets, blocked private and metadata ranges, bounded and rate-limited probes, no port scanning.
 
 ## Tech stack
@@ -90,7 +90,8 @@ Tests are deterministic and never touch the network: DNS, HTTP, ping and sockets
 - Live targets must be allowlisted. Private, link-local, multicast and cloud-metadata addresses are blocked unless lab ranges are explicitly enabled.
 - Probes are sequential, bounded, time-limited and rate-limited.
 - The allowlist is a permission boundary, not proof that a target is safe to probe.
-- The API has no authentication yet, so keep it on localhost and do not deploy it publicly.
+- POST lifecycle and diagnosis endpoints can use `X-API-Key` when `NDM_API_KEY` is configured; public deployments must set a strong key.
+- Live API diagnosis is disabled unless `NDM_ALLOW_LIVE_API=true`, and live targets still require the existing allowlist and safety checks.
 
 ## Documentation
 
@@ -104,13 +105,14 @@ Tests are deterministic and never touch the network: DNS, HTTP, ping and sockets
 Add real screenshots to `docs/screenshots/` and reference them here:
 
 - `dashboard.png`: overview cards, device inventory and incident queue
+- `device-charts.png`: inline SVG latency and packet-loss history with device detail
+- `incident-timeline.png`: chronological incident view and lifecycle guidance
+- `diagnosis-panel.png`: target diagnosis with confidence, evidence and ordered steps
 - `incident-guidance.png`: troubleshooting guidance for an incident
 - `api-docs.png`: the interactive API documentation
 
 ## Roadmap
 
-- Per-device latency and loss charts, and a live "diagnose a target" panel on the dashboard
-- Authentication for the API and write actions
 - Scheduled live checks and notifications
 
 ## Why I built this

@@ -80,7 +80,7 @@ To restore, stop the app, copy the backup into the named volume using a temporar
 
 A Docker-based web service can be used for a temporary demonstration. Seeded metric history can be replayed with `network-diagnostics seed`, and HTML, Markdown, incident CSV, and per-device CSV reports can be written to protected storage:
 
-1. The API currently has no authentication. Do **not** deploy it to a public URL until authentication/authorization and CSRF protections are implemented and reviewed. The safest choice is to keep the app local.
+1. If the API is deployed publicly, set a strong `NDM_API_KEY`; all acknowledge, resolve and diagnose POST requests then require the `X-API-Key` header. Add CSRF protection, authorization roles, TLS and a deployment-specific review before production use. Keep live API diagnosis disabled unless explicitly needed.
 2. Free web-service filesystems are generally ephemeral. A SQLite file written inside a container can disappear when the service restarts or redeploys. Do not treat it as durable storage.
 3. Persistent disks and always-on service features may incur charges. This project does not require Render or any paid infrastructure; local Docker is the reproducible, zero-subscription option.
 4. If you later configure a persistent disk, mount it at `/var/data` and set `NDM_DATABASE_URL=sqlite:////var/data/network_diagnostics.db`. Confirm current platform pricing, filesystem semantics, and Python/Docker support in Render's official documentation before enabling a paid feature.
@@ -99,8 +99,10 @@ Do not configure `NDM_MODE=live` as a deployment shortcut. Live checks must rema
 | `NDM_TIMEOUT_SECONDS` | `3.0` | Live-check timeout setting. |
 | `NDM_MIN_CHECK_INTERVAL_SECONDS` | `2.0` | Minimum interval between checks. |
 | `NDM_DNS_RESOLVERS` | `1.1.1.1,8.8.8.8` | Configured DNS resolver list. |
+| `NDM_ALLOW_LIVE_API` | `false` | Enables live `/api/diagnose` requests only when explicitly true. |
+| `NDM_API_KEY` | unset | Optional shared key for all acknowledge, resolve and diagnose POST endpoints via `X-API-Key`. |
 
-Never put credentials in these variables unless a future feature explicitly requires them; none are needed for the current simulated workflow.
+Do not commit API keys or database credentials. For public/shared deployments, set `NDM_API_KEY` to a strong secret and keep live API diagnosis disabled unless explicitly needed and allowlisted.
 
 ## Troubleshooting
 
@@ -113,4 +115,4 @@ Never put credentials in these variables unless a future feature explicitly requ
 
 ## Production-readiness gaps
 
-Before any real public or organisational deployment, add authentication and role-based authorization, CSRF protection for browser state-changing actions, security headers, structured logging and retention policies, migrations, backup automation, monitoring of the monitoring service, dependency/image scanning, and a deployment-specific threat model. Consider PostgreSQL for multi-user or concurrent workloads. Keep network diagnostics opt-in and scoped to approved assets.
+Before real public or organisational deployment, add role-based authorization, CSRF protection for browser state-changing actions, security headers, structured logging and retention policies, migrations, backup automation, monitoring of the monitoring service, dependency/image scanning, and a deployment-specific threat model. Consider PostgreSQL for multi-user or concurrent workloads. Keep network diagnostics opt-in and scoped to approved assets.

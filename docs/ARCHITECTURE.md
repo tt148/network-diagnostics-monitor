@@ -64,13 +64,15 @@ Reports can be rendered as JSON, Markdown, formula-safe incident CSV, per-device
 | POST | `/api/incidents/{id}/acknowledge` | Acknowledge an incident |
 | POST | `/api/incidents/{id}/resolve` | Resolve an incident |
 | GET | `/api/incidents/{id}/recommendations` | Advisory troubleshooting steps |
-| GET | `/api/reports/{json,markdown,csv}` | Export report data |
+| POST | `/api/diagnose` | Simulated diagnosis or explicitly enabled live diagnosis |
+| GET | `/api/reports/{json,markdown,csv,html}` | Export report data |
+| GET | `/api/incidents/{id}/postmortem` | Markdown incident post-mortem |
 
 List endpoints cap `limit` at 500. Unknown records return 404, invalid query parameters 422, and acknowledging a resolved incident 409. The API does not create devices, write metrics, change the allowlist or start probes. Interactive documentation is served at `/docs` and `/redoc`.
 
 ## Dashboard
 
-The dashboard (`/`) uses plain HTML, CSS and JavaScript with no external CDN. It shows summary cards, the device inventory, the incident queue (with acknowledge, resolve and guidance actions) and the latest measurements. It follows the system light or dark theme and works on phone screens.
+The dashboard (`/`) uses plain HTML, CSS and JavaScript with no external CDN. It shows summary cards, device inventory, incident queue, latest measurements, per-device detail, inline SVG latency/loss charts, incident timeline, and a diagnosis panel. It follows the system light or dark theme, stores an optional API key only in `sessionStorage`, and works on phone screens.
 
 ## Safety model
 
@@ -82,7 +84,6 @@ The dashboard (`/`) uses plain HTML, CSS and JavaScript with no external CDN. It
 
 ## Known limitations
 
-- The API has no authentication or CSRF protection; keep it local (see [DEPLOYMENT.md](DEPLOYMENT.md)).
-- The dashboard has no charts and no live "diagnose a target" panel yet; the diagnostic engines are available through the CLI.
+- Optional API-key protection covers POST lifecycle and diagnosis endpoints; CSRF protection, authorization roles and browser-safe public controls require further review.
 - No scheduler or notification delivery.
 - No migration tooling is provided yet; schema evolution requires review and a migration workflow.
