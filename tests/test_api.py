@@ -134,7 +134,7 @@ def test_report_html_postmortem_and_metric_series(tmp_path):
         assert html_report.headers["content-type"].startswith("text/html")
         assert "<!doctype html>" in html_report.text
 
-        incidents = client.get("/api/incidents") .json()
+        incidents = client.get("/api/incidents").json()
         incident_id = incidents[0]["id"]
         postmortem = client.get(f"/api/incidents/{incident_id}/postmortem")
         assert postmortem.status_code == 200

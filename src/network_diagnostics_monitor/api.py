@@ -47,6 +47,18 @@ class DiagnoseRequest(BaseModel):
     mode: Literal["simulated", "live"] = "simulated"
 
 
+def _require_api_key(request: Request) -> None:
+    configured_key = request.app.state.settings.api_key
+    if not configured_key:
+        return
+    supplied_key = request.headers.get("X-API-Key", "")
+    if not compare_digest(supplied_key, configured_key):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+
+API_KEY_DEPENDENCY = Depends(_require_api_key)
+
+
 DASHBOARD_HTML = r"""<!doctype html>
 <html lang="en">
 <head>
@@ -156,14 +168,6 @@ def create_app(database_url: str | None = None) -> FastAPI:
     api.state.engine = engine
     api.state.session_factory = session_factory
     api.state.settings = get_settings()
-
-    def require_api_key(request: Request) -> None:
-        configured_key = api.state.settings.api_key
-        if not configured_key:
-            return
-        supplied_key = request.headers.get("X-API-Key", "")
-        if not compare_digest(supplied_key, configured_key):
-            raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
     @api.get("/api/health", tags=["system"])
     def health() -> dict[str, str]:
@@ -284,7 +288,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         incident_id: int,
         payload: AcknowledgeRequest,
         session: SessionDep,
-        api_key: Any = Depends(require_api_key),
+        api_key: Any = API_KEY_DEPENDENCY,
     ) -> dict[str, Any]:
         try:
             incident = acknowledge_incident(session, incident_id, payload.acknowledged_by)
@@ -304,7 +308,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     def resolve(
         incident_id: int,
         session: SessionDep,
-        api_key: Any = Depends(require_api_key),
+        api_key: Any = API_KEY_DEPENDENCY,
     ) -> dict[str, Any]:
         try:
             incident = resolve_incident(session, incident_id)
@@ -328,7 +332,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     @api.post("/api/diagnose", tags=["diagnostics"])
     def diagnose(
         payload: DiagnoseRequest,
-        api_key: Any = Depends(require_api_key),
+        api_key: Any = API_KEY_DEPENDENCY,
     ) -> dict[str, Any]:
         settings = api.state.settings
         selected_mode = payload.mode
@@ -356,13 +360,13 @@ def create_app(database_url: str | None = None) -> FastAPI:
             "dns": dns_result,
             "latency": latency_result,
             "http": http_result,
-            "diagnosis": diagnose_target(
-                payload.target, dns_result, latency_result, http_result
-            ),
+            "diagnosis": diagnose_target(payload.target, dns_result, latency_result, http_result),
         }
 
     @api.get("/api/reports/{report_format}", tags=["reports"])
-    def report(report_format: Literal["json", "markdown", "csv", "html"], session: SessionDep) -> Response:
+    def report(
+        report_format: Literal["json", "markdown", "csv", "html"], session: SessionDep
+    ) -> Response:
         report_data = build_report(session)
         if report_format == "json":
             return Response(render_json(report_data), media_type="application/json")
