@@ -230,22 +230,27 @@ def test_cli_html_report_writes_requested_file(tmp_path, monkeypatch):
     assert "<!doctype html>" in output.read_text(encoding="utf-8")
 
 
-def test_cli_postmortem_requires_incident_id(tmp_path, monkeypatch):
+def test_cli_postmortem_requires_incident_id(tmp_path, monkeypatch, normalize_cli_output):
     monkeypatch.setenv("NDM_DATABASE_URL", f"sqlite:///{tmp_path / 'cli.db'}")
     result = CliRunner().invoke(app, ["report", "--format", "postmortem"])
+    output = normalize_cli_output(result.output)
     assert result.exit_code != 0
-    assert "--incident-id is required" in result.output
+    assert "--incident-id is required" in output
 
 
-def test_cli_rejects_unknown_report_format():
+def test_cli_rejects_unknown_report_format(normalize_cli_output):
     result = CliRunner().invoke(app, ["report", "--format", "xml"])
+    output = normalize_cli_output(result.output)
     assert result.exit_code != 0
-    assert "Invalid value:" in result.output
-    assert "device-csv" in result.output
+    assert "Invalid value:" in output
+    assert "device-csv" in output
 
 
-def test_cli_recommendations_for_missing_incident_is_friendly(tmp_path, monkeypatch):
+def test_cli_recommendations_for_missing_incident_is_friendly(
+    tmp_path, monkeypatch, normalize_cli_output
+):
     monkeypatch.setenv("NDM_DATABASE_URL", f"sqlite:///{tmp_path / 'cli.db'}")
     result = CliRunner().invoke(app, ["recommendations", "999"])
+    output = normalize_cli_output(result.output)
     assert result.exit_code != 0
-    assert "incident 999 was not found" in result.output
+    assert "incident 999 was not found" in output

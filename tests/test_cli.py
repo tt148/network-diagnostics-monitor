@@ -5,21 +5,24 @@ from typer.testing import CliRunner
 from network_diagnostics_monitor.cli import app
 
 
-def test_diagnose_defaults_to_simulated(monkeypatch) -> None:
+def test_diagnose_defaults_to_simulated(monkeypatch, normalize_cli_output) -> None:
     monkeypatch.setenv("NDM_MODE", "simulated")
     runner = CliRunner()
     result = runner.invoke(app, ["diagnose", "example.com"])
-    assert result.exit_code == 0, result.output
-    assert '"mode": "simulated"' in result.output
-    assert "no HTTP request" in result.output
-    assert '"findings"' in result.output
-    assert '"layer": "application"' in result.output
+    output = normalize_cli_output(result.output)
+    assert result.exit_code == 0, output
+    assert '"mode": "simulated"' in output
+    assert "no HTTP request" in output
+    assert '"findings"' in output
+    assert '"layer": "application"' in output
 
 
-def test_diagnose_rejects_unknown_mode() -> None:
+def test_diagnose_rejects_unknown_mode(normalize_cli_output) -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["diagnose", "example.com", "--mode", "bogus"])
+    output = normalize_cli_output(result.output)
     assert result.exit_code != 0
+    assert "mode must be" in output
 
 
 def test_settings_accept_comma_separated_env(monkeypatch) -> None:
