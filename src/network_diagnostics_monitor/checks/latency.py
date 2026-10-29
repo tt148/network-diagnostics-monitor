@@ -7,6 +7,7 @@ import re
 import socket
 import subprocess
 import time
+from itertools import pairwise
 from statistics import mean
 from typing import Any
 
@@ -15,26 +16,75 @@ from ..safety import RateLimiter, resolve_host_safely, validate_live_target
 
 
 def _summary(samples: list[float], attempted: int, method: str) -> dict[str, Any]:
-    """Calculate latency statistics and packet loss from successful samples."""
+    """Calculate latency statistics and packet loss from successful samples.
+
+    ``samples`` must be in probe order: jitter is the mean absolute difference
+    between consecutive probes, which sorting the samples would hide.
+    """
     successes = len(samples)
-    ordered = sorted(samples)
-    if ordered:
-        minimum = round(ordered[0], 2)
-        maximum = round(ordered[-1], 2)
-        average = round(mean(ordered), 2)
-        jitter = round(mean(abs(b - a) for a, b in zip(ordered, ordered[1:])), 2) if len(ordered) > 1 else 0.0
+    if samples:
+        minimum = round(min(samples), 2)
+        maximum = round(max(samples), 2)
+        average = round(mean(samples), 2)
+        jitter = (
+            round(mean(abs(b - a) for a, b in pairwise(samples)), 2) if len(samples) > 1 else 0.0
+        )
     else:
         minimum = maximum = average = jitter = None
+    loss = round((attempted - successes) / attempted * 100, 2) if attempted else 0.0
     return {
         "method": method,
         "probes_sent": attempted,
         "probes_received": successes,
-        "packet_loss_percent": round((attempted - successes) / attempted * 100, 2) if attempted else 0.0,
+        "packet_loss_percent": loss,
         "min_ms": minimum,
         "avg_ms": average,
         "max_ms": maximum,
         "jitter_ms": jitter,
     }
+
+
+_PING_UNAVAILABLE_HINTS = ("operation not permitted", "permission denied", "not permitted")
+
+
+def _ping_once(ping_args: list[str], timeout: float) -> tuple[str, float | None]:
+    """Run one ping and classify the outcome.
+
+    Returns ``("ok", ms)``, ``("lost", None)`` when ping ran but got no reply, or
+    ``("unavailable", None)`` when ICMP cannot be used here (no ``ping`` binary or
+    no permission), in which case the caller may fall back to a TCP probe.
+    """
+    started = time.perf_counter()
+    try:
+        completed = subprocess.run(
+            ping_args,
+            capture_output=True,
+            text=True,
+            timeout=timeout + 1,
+            check=False,
+        )
+    except FileNotFoundError:
+        return "unavailable", None
+    except subprocess.TimeoutExpired:
+        return "lost", None
+    output = f"{completed.stdout}{completed.stderr}"
+    if completed.returncode == 0:
+        match = re.search(r"time[=<]\s*([\d.]+)\s*ms", output, flags=re.IGNORECASE)
+        elapsed = float(match.group(1)) if match else (time.perf_counter() - started) * 1000
+        return "ok", elapsed
+    if any(hint in output.lower() for hint in _PING_UNAVAILABLE_HINTS):
+        return "unavailable", None
+    return "lost", None
+
+
+def _tcp_once(hostname: str, timeout: float) -> float | None:
+    """Time one TCP connection to port 443; return None when it fails."""
+    started = time.perf_counter()
+    try:
+        with socket.create_connection((hostname, 443), timeout=timeout):
+            return (time.perf_counter() - started) * 1000
+    except OSError:
+        return None
 
 
 def check_latency(
@@ -64,7 +114,7 @@ def check_latency(
     resolve_host_safely(hostname, settings, settings.timeout_seconds)
     limiter = limiter or RateLimiter(settings.min_check_interval_seconds)
     samples: list[float] = []
-    method = "ping"
+    methods_used: set[str] = set()
     system = platform.system().lower()
     ping_args = ["ping", "-n" if system == "windows" else "-c", "1"]
     if system == "windows":
@@ -75,30 +125,23 @@ def check_latency(
 
     for _ in range(count):
         limiter.wait_turn()
-        started = time.perf_counter()
-        try:
-            completed = subprocess.run(
-                ping_args,
-                capture_output=True,
-                text=True,
-                timeout=settings.timeout_seconds + 1,
-                check=False,
-            )
-            output = completed.stdout + completed.stderr
-            match = re.search(r"time[=<]\s*([\d.]+)\s*ms", output, flags=re.IGNORECASE)
-            if completed.returncode == 0:
-                samples.append(float(match.group(1)) if match else (time.perf_counter() - started) * 1000)
-                continue
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-        method = "tcp-connect-fallback"
-        try:
-            started = time.perf_counter()
-            with socket.create_connection((hostname, 443), timeout=settings.timeout_seconds):
-                samples.append((time.perf_counter() - started) * 1000)
-        except OSError:
-            continue
+        outcome, elapsed = _ping_once(ping_args, settings.timeout_seconds)
+        if outcome == "unavailable":
+            # ICMP is not usable here (for example a container without NET_RAW),
+            # so measure TCP connect time instead.
+            methods_used.add("tcp-connect-fallback")
+            elapsed = _tcp_once(hostname, settings.timeout_seconds)
+        else:
+            methods_used.add("ping")
+        # A ping that ran but got no reply is real packet loss; it must not be
+        # hidden by retrying over TCP.
+        if elapsed is not None:
+            samples.append(elapsed)
 
+    if methods_used == {"ping", "tcp-connect-fallback"}:
+        method = "mixed"
+    else:
+        method = next(iter(methods_used))
     summary = _summary(samples, count, method)
     return {
         "target": hostname,
