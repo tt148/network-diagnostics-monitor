@@ -101,17 +101,6 @@ Tests are deterministic and never touch the network: DNS, HTTP, ping and sockets
 - [Troubleshooting patterns](docs/TROUBLESHOOTING.md)
 - [Security policy](SECURITY.md) and [contributing notes](CONTRIBUTING.md)
 
-## Screenshots
-
-Add real screenshots to `docs/screenshots/` and reference them here:
-
-- `dashboard.png`: overview cards, device inventory and incident queue
-- `device-charts.png`: inline SVG latency and packet-loss history with device detail
-- `incident-timeline.png`: chronological incident view and lifecycle guidance
-- `diagnosis-panel.png`: target diagnosis with confidence, evidence and ordered steps
-- `incident-guidance.png`: troubleshooting guidance for an incident
-- `api-docs.png`: the interactive API documentation
-
 ## Roadmap
 
 - Scheduled live checks and notifications
